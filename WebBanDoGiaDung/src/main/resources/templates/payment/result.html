@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kết quả thanh toán MoMo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/home.css}">
+    <style>
+        body { font-family: "Be Vietnam Pro", Arial, sans-serif; background: #f3f6fb; }
+        .payment-result-wrap { max-width: 760px; margin: 48px auto; padding: 0 16px; }
+        .payment-result-card { background: #fff; border-radius: 24px; border: 1px solid #e5e7eb; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08); padding: 32px; }
+        .payment-result-badge { display: inline-block; padding: 8px 14px; border-radius: 999px; font-weight: 700; margin-bottom: 16px; }
+        .payment-success { background: #dcfce7; color: #166534; }
+        .payment-failed { background: #fee2e2; color: #b91c1c; }
+        .payment-meta { display: grid; gap: 12px; margin-top: 24px; }
+        .payment-meta-item { padding: 14px 16px; border-radius: 16px; background: #f8fafc; border: 1px solid #e5e7eb; }
+    </style>
+</head>
+<body>
+<div class="payment-result-wrap">
+    <div class="payment-result-card">
+        <span class="payment-result-badge" th:classappend="${success} ? ' payment-success' : ' payment-failed'"
+              th:text="${success} ? 'Thanh toán thành công' : 'Thanh toán thất bại'">Kết quả thanh toán</span>
+        <h1 class="h3 fw-bold mb-3" th:text="${title}">Kết quả thanh toán</h1>
+        <p class="text-secondary mb-0" th:text="${message}">Thông báo thanh toán</p>
+
+        <div class="payment-meta">
+            <div class="payment-meta-item"><strong>Mã đơn nội bộ:</strong> <span th:text="${orderId}">0</span></div>
+            <div class="payment-meta-item" th:if="${momoOrderId != null}"><strong>Mã đơn MoMo:</strong> <span th:text="${momoOrderId}"></span></div>
+            <div class="payment-meta-item" th:if="${momoTransactionId != null && !#strings.isEmpty(momoTransactionId)}"><strong>Mã giao dịch MoMo:</strong> <span th:text="${momoTransactionId}"></span></div>
+            <div class="payment-meta-item"><strong>Số tiền:</strong> <span th:text="${amount}">0</span></div>
+            <div class="payment-meta-item"><strong>Mã kết quả:</strong> <span th:text="${resultCode}">0</span></div>
+            <div class="payment-meta-item" th:if="${requestId != null}"><strong>Request ID:</strong> <span th:text="${requestId}"></span></div>
+            <div class="payment-meta-item" th:if="${localMessage != null}"><strong>Local message:</strong> <span th:text="${localMessage}"></span></div>
+            <div class="payment-meta-item" th:if="${responseBody != null}"><strong>MoMo response:</strong><br><span th:text="${responseBody}"></span></div>
+        </div>
+
+        <div class="d-flex gap-2 flex-wrap mt-4">
+            <a class="btn btn-primary" th:href="@{/cart}">Quay lại giỏ hàng</a>
+            <a class="btn btn-outline-secondary" th:href="@{/products}">Tiếp tục mua sắm</a>
+        </div>
+
+        <p class="text-muted small mt-4 mb-0">Nếu IPN đang chạy localhost, bạn có thể cần ngrok hoặc public tunnel để MoMo sandbox gọi về máy local.</p>
+    </div>
+</div>
+</body>
+</html>

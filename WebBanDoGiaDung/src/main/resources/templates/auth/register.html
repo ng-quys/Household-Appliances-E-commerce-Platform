@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng ký tài khoản</title>
+    <link rel="stylesheet" th:href="@{/css/auth.css}">
+</head>
+<body class="auth-page auth-page-register">
+<div class="auth-wrapper">
+    <div class="auth-card">
+        <div class="brand-pill">Web bán đồ gia dụng</div>
+        <h1>Đăng ký tài khoản</h1>
+        <p class="auth-subtitle">Tạo tài khoản mới để đặt hàng, theo dõi đơn và quản lý hồ sơ cá nhân.</p>
+
+        <div th:if="${error}" class="alert alert-error" th:text="${error}"></div>
+
+        <form th:action="@{/register}" method="post" class="auth-form">
+            <label for="name">Họ tên</label>
+            <input id="name" name="name" type="text" placeholder="Nguyễn Văn A" th:value="${name}" required>
+
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" placeholder="you@example.com" th:value="${email}" required>
+
+            <label for="phone">Số điện thoại</label>
+            <input id="phone" name="phone" type="text" maxlength="10" placeholder="0912345678" th:value="${phone}" required>
+
+            <label for="password">Mật khẩu</label>
+            <input id="password" name="password" type="password" placeholder="Tối thiểu nên dễ nhớ nhưng an toàn" required>
+
+            <label for="confirmPassword">Nhập lại mật khẩu</label>
+            <input id="confirmPassword" name="confirmPassword" type="password" placeholder="Nhập lại mật khẩu" required>
+
+            <button type="submit" class="btn-primary">Tạo tài khoản</button>
+        </form>
+
+        <div class="auth-links">
+            <span>Đã có tài khoản?</span>
+            <a th:href="@{/login}">Đăng nhập</a>
+        </div>
+
+        <a class="back-home" th:href="@{/}">← Quay về trang chủ</a>
+    </div>
+</div>
+</body>
+</html>

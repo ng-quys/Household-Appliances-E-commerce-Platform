@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý đơn hàng</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Orbitron:wght@500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/admin-cyber.css}">
+</head>
+<body class="admin-cyber-body">
+<div class="admin-dashboard-shell">
+    <aside class="admin-sidebar">
+        <div>
+            <div class="admin-brand">CYBER ADMIN</div>
+            <div class="admin-brand-subtitle">Điều khiển hệ thống bán hàng</div>
+        </div>
+        <nav class="admin-nav">
+            <a class="admin-nav-link" th:href="@{/admin/home}">Dashboard</a>
+            <a class="admin-nav-link" th:href="@{/admin/products}">Quản lý sản phẩm</a>
+            <a class="admin-nav-link" th:href="@{/admin/brands}">Quản lý thương hiệu</a>
+            <a class="admin-nav-link" th:href="@{/admin/accounts}">Quản lý tài khoản</a>
+            <a class="admin-nav-link active" th:href="@{/admin/orders}">Quản lý đơn hàng</a>
+            <a class="admin-nav-link" th:href="@{/}">Về trang chủ</a>
+        </nav>
+    </aside>
+
+    <main class="admin-dashboard-main">
+        <section class="cyber-hero">
+            <div>
+                <div class="cyber-kicker">ORDER CONTROL CENTER</div>
+                <h1 class="cyber-title">Order Management</h1>
+                <p class="cyber-subtitle">Theo dõi đơn hàng, lọc trạng thái và kiểm soát tiến trình xử lý mà không làm ảnh hưởng checkout hay lịch sử mua hàng.</p>
+            </div>
+        </section>
+
+        <div th:if="${success}" class="flash-message success" th:text="${success}"></div>
+        <div th:if="${error}" class="flash-message error" th:text="${error}"></div>
+        <div th:if="${warning}" class="flash-message error" th:text="${warning}"></div>
+
+        <form class="cyber-card cyber-toolbar" method="get" th:action="@{/admin/orders}">
+            <input class="cyber-input" type="text" name="search" placeholder="Tìm theo mã đơn, tên, email hoặc số điện thoại..." th:value="${search}">
+            <select class="cyber-select" name="status">
+                <option value="" th:selected="${status == null or status == ''}">Tất cả trạng thái</option>
+                <option value="0" th:selected="${status == '0'}">Chờ thanh toán</option>
+                <option value="1" th:selected="${status == '1'}">Chờ xác nhận</option>
+                <option value="2" th:selected="${status == '2'}">Đang chuẩn bị hàng</option>
+                <option value="3" th:selected="${status == '3'}">Đang giao</option>
+                <option value="4" th:selected="${status == '4'}">Hoàn thành</option>
+                <option value="5" th:selected="${status == '5'}">Đã thanh toán</option>
+                <option value="6" th:selected="${status == '6'}">Đã hủy</option>
+            </select>
+            <select class="cyber-select" name="sortOrder">
+                <option value="default" th:selected="${sortOrder == 'default'}">Mới nhất</option>
+                <option value="date_asc" th:selected="${sortOrder == 'date_asc'}">Cũ nhất</option>
+                <option value="price_asc" th:selected="${sortOrder == 'price_asc'}">Tổng tiền tăng</option>
+                <option value="price_desc" th:selected="${sortOrder == 'price_desc'}">Tổng tiền giảm</option>
+            </select>
+            <button class="cyber-button-secondary" type="submit">Lọc dữ liệu</button>
+        </form>
+
+        <section class="cyber-card cyber-table-card">
+            <div class="cyber-table-wrap" th:if="${!#lists.isEmpty(orders)}">
+                <table class="cyber-table">
+                    <thead>
+                    <tr>
+                        <th>Mã đơn</th>
+                        <th>Khách hàng</th>
+                        <th>Ngày đặt</th>
+                        <th>Tổng tiền</th>
+                        <th>Thanh toán</th>
+                        <th>Giao hàng</th>
+                        <th>Trạng thái</th>
+                        <th>Hành động</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="order : ${orders}">
+                        <td class="mono" th:text="${order.orderId}">1</td>
+                        <td>
+                            <strong th:text="${@adminOrderController.resolveCustomerName(order)}">N/A</strong>
+                            <div class="helper-text" th:text="${@adminOrderController.resolveCustomerEmail(order)}">N/A</div>
+                            <div class="helper-text mono" th:text="${@adminOrderController.resolveCustomerPhone(order)}">N/A</div>
+                        </td>
+                        <td class="mono" th:text="${@adminOrderController.formatOrderDate(order)}">N/A</td>
+                        <td class="mono" th:text="${@adminOrderController.formatOrderTotal(order)}">0 đ</td>
+                        <td th:text="${@adminOrderController.resolvePaymentName(order)}">N/A</td>
+                        <td th:text="${@adminOrderController.resolveDeliveryName(order)}">N/A</td>
+                        <td>
+                            <span class="status-badge"
+                                  th:classappend="${order.status == '4' or order.status == '5'} ? ' success' : (${order.status == '6'} ? ' danger' : (${order.status == '0' or order.status == '2' or order.status == '3'} ? ' warning' : ' muted'))"
+                                  th:text="${@adminOrderController.resolveOrderStatus(order.status)}">Không rõ</span>
+                        </td>
+                        <td>
+                            <div class="cyber-actions">
+                                <a class="cyber-button-secondary" th:href="@{/admin/orders/{id}(id=${order.orderId})}">Xem chi tiết</a>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div th:if="${#lists.isEmpty(orders)}" class="empty-state">Không có đơn hàng nào phù hợp bộ lọc hiện tại.</div>
+        </section>
+    </main>
+</div>
+</body>
+</html>

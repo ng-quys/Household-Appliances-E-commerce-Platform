@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý tài khoản</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Orbitron:wght@500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/admin-cyber.css}">
+</head>
+<body class="admin-cyber-body">
+<div class="admin-dashboard-shell">
+    <aside class="admin-sidebar">
+        <div>
+            <div class="admin-brand">CYBER ADMIN</div>
+            <div class="admin-brand-subtitle">Điều khiển hệ thống bán hàng</div>
+        </div>
+        <nav class="admin-nav">
+            <a class="admin-nav-link" th:href="@{/admin/home}">Dashboard</a>
+            <a class="admin-nav-link" th:href="@{/admin/products}">Quản lý sản phẩm</a>
+            <a class="admin-nav-link" th:href="@{/admin/brands}">Quản lý thương hiệu</a>
+            <a class="admin-nav-link active" th:href="@{/admin/accounts}">Quản lý tài khoản</a>
+            <a class="admin-nav-link" th:href="@{/admin/orders}">Quản lý đơn hàng</a>
+            <a class="admin-nav-link" th:href="@{/}">Về trang chủ</a>
+        </nav>
+    </aside>
+
+    <main class="admin-dashboard-main">
+        <section class="cyber-hero">
+            <div>
+                <div class="cyber-kicker">ACCOUNT CONTROL CENTER</div>
+                <h1 class="cyber-title">Account Management</h1>
+                <p class="cyber-subtitle">Theo dõi người dùng, trạng thái hoạt động và khóa hoặc mở khóa tài khoản mà không làm mất dữ liệu hệ thống.</p>
+            </div>
+        </section>
+
+        <div th:if="${success}" class="flash-message success" th:text="${success}"></div>
+        <div th:if="${error}" class="flash-message error" th:text="${error}"></div>
+
+        <form class="cyber-card cyber-toolbar" method="get" th:action="@{/admin/accounts}" style="grid-template-columns: minmax(0, 1fr) auto;">
+            <input class="cyber-input" type="text" name="search" placeholder="Tìm theo tên, email hoặc số điện thoại..." th:value="${search}">
+            <button class="cyber-button-secondary" type="submit">Tìm kiếm</button>
+        </form>
+
+        <section class="cyber-card cyber-table-card">
+            <div class="cyber-table-wrap" th:if="${!#lists.isEmpty(users)}">
+                <table class="cyber-table">
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Tên</th>
+                        <th>Email</th>
+                        <th>Số điện thoại</th>
+                        <th>Role</th>
+                        <th>Trạng thái</th>
+                        <th>Ngày tạo</th>
+                        <th>Hành động</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="user : ${users}">
+                        <td class="mono" th:text="${user.accountId}">1</td>
+                        <td>
+                            <strong th:text="${user.name}">Tên</strong>
+                            <div class="helper-text mono" th:text="${'Updated: ' + (user.updateAt != null ? #temporals.format(user.updateAt, 'dd/MM/yyyy HH:mm') : 'N/A')}">Updated</div>
+                        </td>
+                        <td th:text="${user.email}">mail@example.com</td>
+                        <td class="mono" th:text="${user.phone}">0900000000</td>
+                        <td>
+                            <span class="status-badge" th:classappend="${user.role == 0} ? ' danger' : (${user.role == 2} ? ' muted' : ' success')"
+                                  th:text="${user.role == 0 ? 'ADMIN' : (user.role == 2 ? 'STAFF' : 'USER')}">USER</span>
+                        </td>
+                        <td>
+                            <span th:if="${user.status == '1'}" class="status-badge success">Hoạt động</span>
+                            <span th:if="${user.status != '1'}" class="status-badge danger">Khóa</span>
+                        </td>
+                        <td class="mono" th:text="${user.createAt != null ? #temporals.format(user.createAt, 'dd/MM/yyyy HH:mm') : 'Chưa cập nhật'}">04/05/2026</td>
+                        <td>
+                            <div class="cyber-actions">
+                                <a class="cyber-button-secondary" th:href="@{'/admin/accounts/' + ${user.accountId}}">Xem chi tiết</a>
+                                <form th:if="${user.status == '1'}" th:action="@{'/admin/accounts/' + ${user.accountId} + '/lock'}" method="post" style="display:inline-flex; margin:0;">
+                                    <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                                    <button class="cyber-button-danger" type="submit" th:disabled="${currentAccountId == user.accountId or user.role == 0}" onclick="return confirm('Bạn có chắc muốn khóa tài khoản này không?')">Khóa tài khoản</button>
+                                </form>
+                                <form th:if="${user.status != '1'}" th:action="@{'/admin/accounts/' + ${user.accountId} + '/unlock'}" method="post" style="display:inline-flex; margin:0;">
+                                    <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                                    <button class="cyber-button" type="submit" onclick="return confirm('Bạn có chắc muốn mở khóa tài khoản này không?')">Mở khóa</button>
+                                </form>
+                            </div>
+                            <div class="helper-text" th:if="${currentAccountId == user.accountId}">Không thể tự khóa tài khoản đang đăng nhập.</div>
+                            <div class="helper-text" th:if="${user.role == 0}">Tài khoản ADMIN không cho khóa từ màn hình này.</div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div th:if="${#lists.isEmpty(users)}" class="empty-state">Không tìm thấy tài khoản nào phù hợp bộ lọc hiện tại.</div>
+        </section>
+    </main>
+</div>
+</body>
+</html>

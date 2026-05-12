@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thêm sản phẩm</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Orbitron:wght@500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/admin-cyber.css}">
+</head>
+<body class="admin-cyber-body">
+<div class="admin-dashboard-shell">
+    <aside class="admin-sidebar">
+        <div>
+            <div class="admin-brand">CYBER ADMIN</div>
+            <div class="admin-brand-subtitle">Điều khiển hệ thống bán hàng</div>
+        </div>
+        <nav class="admin-nav">
+            <a class="admin-nav-link" th:href="@{/admin/home}">Dashboard</a>
+            <a class="admin-nav-link active" th:href="@{/admin/products}">Quản lý sản phẩm</a>
+            <a class="admin-nav-link" th:href="@{/admin/brands}">Quản lý thương hiệu</a>
+            <a class="admin-nav-link" th:href="@{/admin/accounts}">Quản lý tài khoản</a>
+            <a class="admin-nav-link" th:href="@{/admin/orders}">Quản lý đơn hàng</a>
+            <a class="admin-nav-link" th:href="@{/}">Về trang chủ</a>
+        </nav>
+    </aside>
+
+    <main class="admin-dashboard-main">
+        <section class="cyber-hero">
+            <div>
+                <div class="cyber-kicker">CREATE PRODUCT</div>
+                <h1 class="cyber-title">Add Product</h1>
+                <p class="cyber-subtitle">Điền thông tin đầy đủ để đồng bộ sản phẩm mới vào hệ thống quản trị.</p>
+            </div>
+            <a class="cyber-button-secondary" th:href="@{/admin/products}">Quay lại danh sách</a>
+        </section>
+
+        <div th:if="${error}" class="flash-message error" th:text="${error}"></div>
+
+        <form class="cyber-card cyber-form-card" th:action="@{/admin/products/create}" method="post" th:object="${product}">
+            <div class="cyber-form-grid">
+                <div class="cyber-form-group full">
+                    <label for="productName">Tên sản phẩm</label>
+                    <input id="productName" class="cyber-input" type="text" th:field="*{productName}" required>
+                </div>
+                <div class="cyber-form-group full">
+                    <label for="image">Link ảnh</label>
+                    <input id="image" class="cyber-input" type="text" th:field="*{image}" placeholder="https://..." oninput="updateImagePreview(this.value)">
+                    <img id="imagePreview" class="image-preview" th:src="${product.image != null && !#strings.isEmpty(product.image) ? product.image : 'https://via.placeholder.com/320x320?text=Preview'}" alt="Preview ảnh">
+                </div>
+                <div class="cyber-form-group">
+                    <label for="price">Giá</label>
+                    <input id="price" class="cyber-input" type="number" min="1" step="0.01" th:field="*{price}" required>
+                </div>
+                <div class="cyber-form-group">
+                    <label for="quantity">Số lượng</label>
+                    <input id="quantity" class="cyber-input" type="number" min="0" th:field="*{quantity}" required>
+                </div>
+                <div class="cyber-form-group">
+                    <label for="type">Loại sản phẩm</label>
+                    <input id="type" class="cyber-input" type="number" min="1" th:field="*{type}" required>
+                </div>
+                <div class="cyber-form-group">
+                    <label for="status">Trạng thái</label>
+                    <select id="status" class="cyber-select" th:field="*{status}">
+                        <option value="1">Hiển thị</option>
+                        <option value="0">Ẩn</option>
+                    </select>
+                </div>
+                <div class="cyber-form-group">
+                    <label for="brandId">Hãng sản xuất</label>
+                    <select id="brandId" class="cyber-select" th:field="*{brandId}" required>
+                        <option th:value="${null}">-- Chọn hãng sản xuất --</option>
+                        <option th:each="brand : ${brands}" th:value="${brand.brandId}" th:text="${brand.brandName}"></option>
+                    </select>
+                </div>
+                <div class="cyber-form-group">
+                    <label for="genreId">Thể loại</label>
+                    <select id="genreId" class="cyber-select" th:field="*{genreId}" required>
+                        <option th:value="${null}">-- Chọn thể loại --</option>
+                        <option th:each="genre : ${genres}" th:value="${genre.genreId}" th:text="${genre.genreName}"></option>
+                    </select>
+                </div>
+                <div class="cyber-form-group full">
+                    <label for="description">Mô tả</label>
+                    <textarea id="description" class="cyber-textarea" th:field="*{description}" rows="6"></textarea>
+                </div>
+            </div>
+            <div class="cyber-actions" style="margin-top: 22px;">
+                <button class="cyber-button" type="submit">Lưu sản phẩm</button>
+                <a class="cyber-button-secondary" th:href="@{/admin/products}">Hủy</a>
+            </div>
+        </form>
+    </main>
+</div>
+<script>
+    function updateImagePreview(value) {
+        const preview = document.getElementById('imagePreview');
+        preview.src = value && value.trim() ? value : 'https://via.placeholder.com/320x320?text=Preview';
+    }
+</script>
+</body>
+</html>
