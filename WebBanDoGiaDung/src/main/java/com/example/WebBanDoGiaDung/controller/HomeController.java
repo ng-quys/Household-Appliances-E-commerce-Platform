@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -134,6 +135,9 @@ public class HomeController {
     @RequestMapping("/api/chat")
     public class AiChatController {
 
+        @Value("${gemini.api.key}")
+        private String apiKey;
+
         private final ProductRepository productRepository;
 
         public AiChatController(ProductRepository productRepository) {
@@ -143,7 +147,6 @@ public class HomeController {
         @PostMapping
         public ResponseEntity<ChatResponse> chat(@RequestBody ChatRequest request) {
             try {
-                String apiKey = "AIzaSyBieqtBy59ROD2clHQLMaqowMMs7GHmv3c";
                 String modelName = "gemini-2.5-flash";
 
                 String apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/"
