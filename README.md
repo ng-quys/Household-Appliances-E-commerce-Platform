@@ -183,6 +183,10 @@ http://localhost:8080
 
 ![Product Detail](screenshots/product-detail.png)
 
+### Profile
+
+![Profile ](screenshots/profile.png)
+
 ### Shopping Cart
 
 ![Shopping Cart](screenshots/shopping-cart.png)
