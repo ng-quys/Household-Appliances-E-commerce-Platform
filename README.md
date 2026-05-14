@@ -44,6 +44,160 @@ The system supports product browsing, shopping cart management, checkout, COD/Mo
 - Bootstrap
 - Thymeleaf
 
+## System Architecture
+
+```mermaid
+flowchart LR
+    User["User / Customer"] --> Browser["Web Browser"]
+    Admin["Admin"] --> Browser
+
+    Browser --> App["Spring Boot Application"]
+
+    App --> MVC["Spring MVC Controllers"]
+    MVC --> Service["Service Layer"]
+    Service --> Repo["Spring Data JPA Repositories"]
+    Repo --> DB[("MySQL Database")]
+
+    Service --> Redis[("Redis Cache")]
+    Service --> RabbitMQ["RabbitMQ Queue"]
+    RabbitMQ --> MailService["Order Email Listener"]
+    MailService --> Gmail["Gmail SMTP / Spring Mail"]
+
+    Service --> MoMo["MoMo Payment Sandbox"]
+    Service --> Gemini["Gemini API Chatbot"]
+
+    App --> Thymeleaf["Thymeleaf Templates"]
+    Thymeleaf --> Browser
+```
+
+## 2. Checkout Flow Diagram
+
+```md
+## Checkout Flow Diagram
+```
+```mermaid
+sequenceDiagram
+    actor Customer
+    participant Web as Web Browser
+    participant App as Spring Boot App
+    participant DB as MySQL
+    participant Rabbit as RabbitMQ
+    participant Mail as Email Listener
+    participant SMTP as Gmail SMTP
+    participant MoMo as MoMo Sandbox
+
+    Customer->>Web: Add products to cart
+    Web->>App: Submit checkout form
+    App->>DB: Create Order, OrderDetail, OrderAddress
+
+    alt COD Payment
+        App->>Rabbit: Publish ORDER_CREATED event
+        Rabbit->>Mail: Consume order email event
+        Mail->>SMTP: Send order confirmation email
+        App-->>Web: Redirect to /profile#order-history
+    else MoMo Payment
+        App->>MoMo: Create payment request
+        MoMo-->>Web: Redirect to MoMo payment page
+        Customer->>MoMo: Complete payment
+        MoMo->>App: Return/IPN callback
+        App->>DB: Update order payment status
+        App->>Rabbit: Publish ORDER_PAID event
+        Rabbit->>Mail: Consume order email event
+        Mail->>SMTP: Send payment confirmation email
+        App-->>Web: Redirect to order history
+    end
+```
+
+## 3. Database Relationship Diagram
+
+```md
+## Database Relationship Diagram
+```
+```mermaid
+erDiagram
+    ACCOUNT ||--o{ ORDER_ENTITY : places
+    ACCOUNT ||--o{ ACCOUNT_ADDRESS : owns
+
+    ORDER_ENTITY ||--o{ ORDER_DETAIL : contains
+    ORDER_ENTITY ||--|| ORDER_ADDRESS : has
+    ORDER_ENTITY }o--|| PAYMENT : uses
+    ORDER_ENTITY }o--|| DELIVERY : uses
+
+    PRODUCT ||--o{ ORDER_DETAIL : included_in
+    BRAND ||--o{ PRODUCT : owns
+    GENRE ||--o{ PRODUCT : categorizes
+    DISCOUNT ||--o{ PRODUCT : applies_to
+
+    ACCOUNT {
+        int account_id
+        string email
+        string password
+        string name
+        string phone
+        string role
+        string status
+    }
+
+    PRODUCT {
+        int product_id
+        string product_name
+        double price
+        int quantity
+        string image
+        string status
+        int brand_id
+        int genre_id
+    }
+
+    ORDER_ENTITY {
+        int order_id
+        datetime order_date
+        double total
+        string status
+        int account_id
+        int payment_id
+        int delivery_id
+    }
+
+    ORDER_DETAIL {
+        int order_detail_id
+        int order_id
+        int product_id
+        int quantity
+        double price
+    }
+
+    ORDER_ADDRESS {
+        int order_address_id
+        int order_id
+        string receiver_name
+        string phone
+        string address
+    }
+
+    BRAND {
+        int brand_id
+        string brand_name
+        string image
+    }
+
+    GENRE {
+        int genre_id
+        string genre_name
+    }
+
+    PAYMENT {
+        int payment_id
+        string payment_name
+    }
+
+    DELIVERY {
+        int delivery_id
+        string delivery_name
+        double delivery_price
+    }
+```
+
 ---
 
 ## How to Run
