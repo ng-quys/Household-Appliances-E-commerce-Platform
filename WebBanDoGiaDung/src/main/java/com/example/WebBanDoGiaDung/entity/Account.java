@@ -29,6 +29,12 @@ public class Account {
     @Column(name = "Role", nullable = false)
     private Integer role;
 
+    @Column(name = "provider", length = 20)
+    private String provider;        // "google", "facebook", "local"
+
+    @Column(name = "provider_id", length = 100)
+    private String providerId;
+
     @Column(name = "Name", nullable = false, length = 50)
     private String name;
 

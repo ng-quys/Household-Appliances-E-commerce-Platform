@@ -167,3 +167,15 @@ h1 {
         font-size: 26px;
     }
 }
+
+.btn-google {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff;
+    color: #333;
+    border: 1px solid #ddd;
+    padding: 10px 16px;
+    border-radius: 4px;
+    text-decoration: none;
+}

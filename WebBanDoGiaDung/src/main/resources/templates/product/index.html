@@ -55,13 +55,42 @@
             <p class="text-secondary mb-0">Khám phá các sản phẩm gia dụng đang được bán.</p>
         </div>
         <div class="d-flex align-items-center gap-3 flex-wrap">
-            <form class="sort-form" th:action="@{/products}" method="get">
-                <label class="sort-label" for="productSort">Sắp xếp giá</label>
-                <select id="productSort" name="sort" class="form-select sort-select" onchange="this.form.submit()">
-                    <option value="" th:selected="${sort == null || #strings.isEmpty(sort)}">Mặc định</option>
-                    <option value="priceAsc" th:selected="${sort == 'priceAsc'}">Giá thấp đến cao</option>
-                    <option value="priceDesc" th:selected="${sort == 'priceDesc'}">Giá cao đến thấp</option>
-                </select>
+            <form class="row g-3 mb-4 align-items-end" th:action="@{/products}" method="get">
+                <div class="col-lg-4">
+                    <input type="text" class="form-control" name="keyword" th:value="${keyword}"
+                           placeholder="Tìm nồi cơm điện, máy giặt, tủ lạnh...">
+                </div>
+                <!-- GENRE COMBOBOX -->
+                <div class="col-md-3 col-lg-2">
+                    <select class="form-select" name="genreId">
+                        <option value="">Tất cả loại sản phẩm</option>
+                        <option th:each="genre : ${genres}"
+                                th:value="${genre.genreId}"
+                                th:text="${genre.genreName}"
+                                th:selected="${genre.genreId == genreId}">
+                        </option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <input type="number" class="form-control" name="minPrice"
+                           th:value="${minPrice}" placeholder="Giá từ" min="0">
+                </div>
+                <div class="col-md-2">
+                    <input type="number" class="form-control" name="maxPrice"
+                           th:value="${maxPrice}" placeholder="Giá đến" min="0">
+                </div>
+                <div class="col-md-3 col-lg-1 d-grid">
+                    <button type="submit" class="btn btn-primary">Lọc</button>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                    <label class="sort-label" for="productSort">Sắp xếp</label>
+                    <select id="productSort" name="sort" class="form-select sort-select" onchange="this.form.submit()">
+                        <option value="" th:selected="${sort == null || #strings.isEmpty(sort)}">Mặc định</option>
+                        <option value="priceAsc" th:selected="${sort == 'priceAsc'}">Giá thấp → cao</option>
+                        <option value="priceDesc" th:selected="${sort == 'priceDesc'}">Giá cao → thấp</option>
+                        <option value="newest" th:selected="${sort == 'newest'}">Mới nhất</option>
+                    </select>
+                </div>
             </form>
             <a class="btn btn-outline-primary" th:href="@{/}">Về trang chủ</a>
         </div>
@@ -87,6 +116,34 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- PHÂN TRANG AN TOÀN -->
+    <div th:if="${productPage != null && productPage.totalPages > 1}" class="d-flex justify-content-center mt-5">
+        <nav aria-label="Page navigation">
+            <ul class="pagination">
+                <li class="page-item" th:classappend="${productPage.first} ? 'disabled'">
+                    <a class="page-link" th:href="@{/products(page=${productPage.number-1}, size=${productPage.size}, sort=${sort})}">« Trước</a>
+                </li>
+
+                <li class="page-item" th:each="i : ${#numbers.sequence(0, productPage.totalPages-1)}"
+                    th:classappend="${i == productPage.number} ? 'active'">
+                    <a class="page-link" th:href="@{/products(page=${i}, size=${productPage.size}, sort=${sort})}"
+                       th:text="${i+1}"></a>
+                </li>
+
+                <li class="page-item" th:classappend="${productPage.last} ? 'disabled'">
+                    <a class="page-link" th:href="@{/products(page=${productPage.number+1}, size=${productPage.size}, sort=${sort})}">Sau »</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+    <!-- Thông tin trang -->
+    <div class="text-center text-secondary mt-3" th:if="${productPage != null}">
+        Trang <strong th:text="${productPage.number + 1}"></strong> /
+        <strong th:text="${productPage.totalPages}"></strong>
+        - Tổng <strong th:text="${productPage.totalElements}"></strong> sản phẩm
     </div>
 </div>
 </body>

@@ -37,7 +37,13 @@
             <span>Chưa có tài khoản?</span>
             <a th:href="@{/register}">Đăng ký ngay</a>
         </div>
-
+        <div class="social-login">
+            <p>Hoặc </p>
+            <a th:href="@{/oauth2/authorization/google}" class="btn-google">
+                <img src="https://developers.google.com/identity/images/g-logo.png" width="20" alt="Google">
+                Đăng nhập bằng Google
+            </a>
+        </div>
         <a class="back-home" th:href="@{/}">← Quay về trang chủ</a>
     </div>
 </div>

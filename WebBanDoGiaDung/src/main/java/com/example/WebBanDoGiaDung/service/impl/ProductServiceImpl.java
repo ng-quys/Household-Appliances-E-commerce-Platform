@@ -7,9 +7,13 @@ import com.example.WebBanDoGiaDung.service.ProductService;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+
+import com.example.WebBanDoGiaDung.specification.ProductSpecification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Service;
 
@@ -114,5 +118,21 @@ public class ProductServiceImpl extends AbstractCrudService<Product, Integer> im
     @CacheEvict(cacheNames = {"productList", "productDetail", "productByGenre"}, allEntries = true)
     public void deleteById(Integer id) {
         repository.deleteById(id);
+    }
+
+    @Override
+    public Page<ProductCacheDto> findActiveProducts(Pageable pageable) {
+        Page<Product> page = repository.findAll(ProductSpecification.hasStatus("1"), pageable);
+
+        return page.map(ProductCacheDto::fromEntity);
+    }
+
+    @Override
+    public Page<ProductCacheDto> searchProducts(String keyword, Integer genreId, Integer brandId,
+                                                Double minPrice, Double maxPrice, Pageable pageable) {
+
+        Page<Product> page = repository.findAll(ProductSpecification.search(keyword, genreId, brandId, minPrice, maxPrice), pageable);
+
+        return page.map(ProductCacheDto::fromEntity);
     }
 }

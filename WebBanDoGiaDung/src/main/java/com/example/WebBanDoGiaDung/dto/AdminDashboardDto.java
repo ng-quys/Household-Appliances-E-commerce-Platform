@@ -8,12 +8,15 @@ import lombok.Value;
 @Builder
 public class AdminDashboardDto {
     long totalProducts;
+    long activeProducts;
+    long hiddenProducts;
     long totalBrands;
     long totalOrders;
     long totalAccounts;
     double totalRevenue;
     long lowStockProducts;
     String selectedRange;
+    String selectedRangeLabel;
     List<String> chartLabels;
     List<Double> revenueSeries;
     List<Long> orderSeries;

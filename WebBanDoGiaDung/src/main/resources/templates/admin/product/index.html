@@ -21,6 +21,7 @@
             <a class="admin-nav-link active" th:href="@{/admin/products}">Quản lý sản phẩm</a>
             <a class="admin-nav-link" th:href="@{/admin/brands}">Quản lý thương hiệu</a>
             <a class="admin-nav-link" th:href="@{/admin/accounts}">Quản lý tài khoản</a>
+            <a class="admin-nav-link" th:href="@{/admin/inventory-prediction}">Dự đoán tồn kho</a>
             <a class="admin-nav-link" th:href="@{/admin/orders}">Quản lý đơn hàng</a>
             <a class="admin-nav-link" th:href="@{/}">Về trang chủ</a>
         </nav>
@@ -39,13 +40,36 @@
         <div th:if="${success}" class="flash-message success" th:text="${success}"></div>
         <div th:if="${error}" class="flash-message error" th:text="${error}"></div>
 
-        <form class="cyber-card cyber-toolbar" method="get" th:action="@{/admin/products}">
+        <section class="product-summary-grid">
+            <article class="product-summary-card">
+                <span>Tổng sản phẩm</span>
+                <strong th:text="${totalProductCount}">0</strong>
+            </article>
+            <article class="product-summary-card success">
+                <span>Đang hiển thị</span>
+                <strong th:text="${visibleProductCount}">0</strong>
+            </article>
+            <article class="product-summary-card muted">
+                <span>Không hiển thị</span>
+                <strong th:text="${hiddenProductCount}">0</strong>
+            </article>
+        </section>
+
+        <form class="cyber-card cyber-toolbar product-filter-toolbar" method="get" th:action="@{/admin/products}">
             <input class="cyber-input" type="text" name="search" placeholder="Tìm theo tên sản phẩm..." th:value="${search}">
-            <select class="cyber-select" name="sortOrder">
+
+            <select class="cyber-select" name="statusFilter" aria-label="Lọc trạng thái hiển thị">
+                <option value="all" th:selected="${statusFilter == null || statusFilter == 'all'}">Tất cả trạng thái</option>
+                <option value="visible" th:selected="${statusFilter == 'visible'}">Đang hiển thị</option>
+                <option value="hidden" th:selected="${statusFilter == 'hidden'}">Không hiển thị</option>
+            </select>
+
+            <select class="cyber-select" name="sortOrder" aria-label="Sắp xếp sản phẩm">
                 <option value="default" th:selected="${sortOrder == 'default'}">Mặc định</option>
                 <option value="priceAsc" th:selected="${sortOrder == 'priceAsc'}">Giá thấp đến cao</option>
                 <option value="priceDesc" th:selected="${sortOrder == 'priceDesc'}">Giá cao đến thấp</option>
                 <option value="stockAsc" th:selected="${sortOrder == 'stockAsc'}">Tồn kho thấp đến cao</option>
+                <option value="stockDesc" th:selected="${sortOrder == 'stockDesc'}">Tồn kho cao đến thấp</option>
                 <option value="latest" th:selected="${sortOrder == 'latest'}">Mới nhất</option>
             </select>
             <button class="cyber-button-secondary" type="submit">Áp dụng</button>
@@ -89,10 +113,11 @@
                         <td>
                             <div class="cyber-actions">
                                 <a class="cyber-button-secondary" th:href="@{'/admin/products/edit/' + ${product.productId}}">Sửa</a>
-                                <form th:action="@{/admin/products/delete/{id}(id=${product.productId})}" method="post" style="display:inline-flex; margin:0;">
+                                <form th:if="${product.status == '1'}" th:action="@{/admin/products/delete/{id}(id=${product.productId})}" method="post" style="display:inline-flex; margin:0;">
                                     <input th:if="${_csrf != null}" type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
                                     <button class="cyber-button-danger" type="submit" onclick="return confirm('Bạn có chắc muốn ẩn sản phẩm này không?')">Ẩn sản phẩm</button>
                                 </form>
+                                <span th:if="${product.status != '1'}" class="status-badge muted">Đã ẩn</span>
                             </div>
                         </td>
                     </tr>
