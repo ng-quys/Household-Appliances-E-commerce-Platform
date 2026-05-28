@@ -76,7 +76,15 @@ public class CheckoutServiceImpl implements CheckoutService {
             throw new IllegalArgumentException("empty_cart");
         }
 
-        AccountAddress defaultAddress = accountAddressService.getDefaultAddress(accountId);
+        AccountAddress defaultAddress;
+        try {
+            defaultAddress = accountAddressService.getDefaultAddress(accountId);
+        } catch (IllegalArgumentException exception) {
+            throw new IllegalArgumentException("missing_default_address");
+        }
+
+        accountAddressService.validateAddressUsableForCheckout(defaultAddress);
+        
         Delivery delivery = deliveryService.findById(deliveryId)
                 .filter(item -> "1".equals(item.getStatus()))
                 .orElseThrow(() -> new IllegalArgumentException("invalid_delivery"));

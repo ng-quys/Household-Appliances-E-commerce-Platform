@@ -242,7 +242,7 @@
                         </div>
                         <div class="address-line" th:text="${address.content}">Số nhà, tên đường</div>
                         <div class="address-location"
-                             th:text="${address.ward != null ? address.ward.wardName : ''} + ', ' + ${address.district != null ? address.district.districtName : ''} + ', ' + ${address.province != null ? address.province.provinceName : ''}">
+                             th:text="${address.wardName} + ', ' + ${address.districtName} + ', ' + ${address.provinceName}">
                             Phường/Xã, Quận/Huyện, Tỉnh/Thành phố
                         </div>
                         <div class="address-card-actions mt-3">

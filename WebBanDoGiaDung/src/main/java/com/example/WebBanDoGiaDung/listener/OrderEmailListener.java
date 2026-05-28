@@ -16,6 +16,7 @@ public class OrderEmailListener {
     private final OrderEmailService orderEmailService;
 
     @RabbitListener(queues = RabbitMqConfig.ORDER_EMAIL_QUEUE)
+    //bắt sự kiện gửi mail,  nghe queue từ Publisher đẩy OrderEmailEvent vào RabbitMQ
     public void handleOrderEmailEvent(OrderEmailEvent event) {
         try {
             log.info("Listener received order email event. queue={}, orderId={}, eventType={}",

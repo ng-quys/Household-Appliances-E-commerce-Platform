@@ -1,6 +1,7 @@
 package com.example.WebBanDoGiaDung.service.impl;
 
 import com.example.WebBanDoGiaDung.dto.ProfileAddressForm;
+import com.example.WebBanDoGiaDung.dto.ProfileAddressView;
 import com.example.WebBanDoGiaDung.entity.Account;
 import com.example.WebBanDoGiaDung.entity.AccountAddress;
 import com.example.WebBanDoGiaDung.entity.District;
@@ -49,17 +50,20 @@ public class AccountAddressServiceImpl extends AbstractCrudService<AccountAddres
     }
 
     @Override
+    public List<ProfileAddressView> getAddressViewsByCurrentAccount(Integer accountId) {
+        return repository.findByAccountAccountIdOrderByIsDefaultDescAccountAddressIdDesc(accountId)
+                .stream()
+                .map(this::toAddressView)
+                .toList();
+    }
+
+    @Override
     @Transactional
     public AccountAddress addAddress(Integer accountId, ProfileAddressForm form) {
         validateForm(form);
         Account account = accountRepository.findById(accountId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy tài khoản"));
-        Province province = provinceRepository.findById(form.getProvinceId())
-                .orElseThrow(() -> new IllegalArgumentException("Tỉnh/Thành phố không hợp lệ"));
-        District district = districtRepository.findById(form.getDistrictId())
-                .orElseThrow(() -> new IllegalArgumentException("Quận/Huyện không hợp lệ"));
-        Ward ward = wardRepository.findById(form.getWardId())
-                .orElseThrow(() -> new IllegalArgumentException("Phường/Xã không hợp lệ"));
+        AddressLocation location = resolveAndValidateLocation(form);
 
         List<AccountAddress> existingAddresses = getAddressesByCurrentAccount(accountId);
         boolean shouldBeDefault = existingAddresses.isEmpty() || Boolean.TRUE.equals(form.getIsDefault());
@@ -69,9 +73,9 @@ public class AccountAddressServiceImpl extends AbstractCrudService<AccountAddres
 
         AccountAddress address = new AccountAddress();
         address.setAccount(account);
-        address.setProvince(province);
-        address.setDistrict(district);
-        address.setWard(ward);
+        address.setProvince(location.province());
+        address.setDistrict(location.district());
+        address.setWard(location.ward());
         address.setAccountUsername(form.getAccountUsername().trim());
         address.setAccountPhoneNumber(form.getAccountPhoneNumber().trim());
         address.setContent(form.getContent().trim());
@@ -88,21 +92,16 @@ public class AccountAddressServiceImpl extends AbstractCrudService<AccountAddres
         validateForm(form);
         AccountAddress address = repository.findByAccountAddressIdAndAccountAccountId(form.getAddressId(), accountId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy địa chỉ hợp lệ"));
-        Province province = provinceRepository.findById(form.getProvinceId())
-                .orElseThrow(() -> new IllegalArgumentException("Tỉnh/Thành phố không hợp lệ"));
-        District district = districtRepository.findById(form.getDistrictId())
-                .orElseThrow(() -> new IllegalArgumentException("Quận/Huyện không hợp lệ"));
-        Ward ward = wardRepository.findById(form.getWardId())
-                .orElseThrow(() -> new IllegalArgumentException("Phường/Xã không hợp lệ"));
+        AddressLocation location = resolveAndValidateLocation(form);
 
         if (Boolean.TRUE.equals(form.getIsDefault())) {
             clearDefaultForAccount(accountId);
             address.setIsDefault(true);
         }
 
-        address.setProvince(province);
-        address.setDistrict(district);
-        address.setWard(ward);
+        address.setProvince(location.province());
+        address.setDistrict(location.district());
+        address.setWard(location.ward());
         address.setAccountUsername(form.getAccountUsername().trim());
         address.setAccountPhoneNumber(form.getAccountPhoneNumber().trim());
         address.setContent(form.getContent().trim());
@@ -183,6 +182,81 @@ public class AccountAddressServiceImpl extends AbstractCrudService<AccountAddres
                 item.setIsDefault(false);
                 repository.save(item);
             }
+        }
+    }
+
+    private ProfileAddressView toAddressView(AccountAddress address) {
+        String provinceName = address.getProvinceId() != null
+                ? provinceRepository.findById(address.getProvinceId()).map(Province::getProvinceName).orElse("")
+                : "";
+
+        String districtName = address.getDistrictId() != null
+                ? districtRepository.findById(address.getDistrictId()).map(District::getDistrictName).orElse("")
+                : "";
+
+        String wardName = address.getWardId() != null
+                ? wardRepository.findById(address.getWardId()).map(Ward::getWardName).orElse("")
+                : "";
+
+        return ProfileAddressView.builder()
+                .accountAddressId(address.getAccountAddressId())
+                .accountUsername(address.getAccountUsername())
+                .accountPhoneNumber(address.getAccountPhoneNumber())
+                .provinceId(address.getProvinceId())
+                .districtId(address.getDistrictId())
+                .wardId(address.getWardId())
+                .provinceName(provinceName)
+                .districtName(districtName)
+                .wardName(wardName)
+                .content(address.getContent())
+                .isDefault(Boolean.TRUE.equals(address.getIsDefault()))
+                .build();
+    }
+
+    private AddressLocation resolveAndValidateLocation(ProfileAddressForm form) {
+        Province province = provinceRepository.findById(form.getProvinceId())
+                .orElseThrow(() -> new IllegalArgumentException("Tỉnh/Thành phố không hợp lệ"));
+
+        District district = districtRepository.findById(form.getDistrictId())
+                .orElseThrow(() -> new IllegalArgumentException("Quận/Huyện không hợp lệ"));
+
+        Ward ward = wardRepository.findById(form.getWardId())
+                .orElseThrow(() -> new IllegalArgumentException("Phường/Xã không hợp lệ"));
+
+        if (!form.getProvinceId().equals(district.getProvinceId())) {
+            throw new IllegalArgumentException("Quận/Huyện không thuộc Tỉnh/Thành phố đã chọn");
+        }
+
+        if (!form.getDistrictId().equals(ward.getDistrictId())) {
+            throw new IllegalArgumentException("Phường/Xã không thuộc Quận/Huyện đã chọn");
+        }
+
+        return new AddressLocation(province, district, ward);
+    }
+
+    private record AddressLocation(Province province, District district, Ward ward) {
+    }
+
+    @Override
+    public void validateAddressUsableForCheckout(AccountAddress address) {
+        if (address == null) {
+            throw new IllegalArgumentException("missing_default_address");
+        }
+
+        if (address.getProvinceId() == null
+                || address.getDistrictId() == null
+                || address.getWardId() == null
+                || address.getContent() == null
+                || address.getContent().trim().isEmpty()) {
+            throw new IllegalArgumentException("invalid_default_address");
+        }
+
+        boolean provinceExists = provinceRepository.existsById(address.getProvinceId());
+        boolean districtExists = districtRepository.existsById(address.getDistrictId());
+        boolean wardExists = wardRepository.existsById(address.getWardId());
+
+        if (!provinceExists || !districtExists || !wardExists) {
+            throw new IllegalArgumentException("invalid_default_address");
         }
     }
 }

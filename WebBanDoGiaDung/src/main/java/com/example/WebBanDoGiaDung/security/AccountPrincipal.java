@@ -13,11 +13,11 @@ import java.util.Map;
 public class AccountPrincipal implements UserDetails, OAuth2User {
 
     private final Account account;
-    private Map<String, Object> attributes;
+    private final Map<String, Object> attributes;
 
     // Constructor cho login thường (không OAuth2)
     public AccountPrincipal(Account account) {
-        this.account = account;
+        this(account, Map.of());
     }
 
     // Constructor cho OAuth2 (có attributes)
