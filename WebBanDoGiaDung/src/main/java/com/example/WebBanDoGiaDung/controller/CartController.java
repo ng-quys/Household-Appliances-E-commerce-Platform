@@ -3,8 +3,8 @@ package com.example.WebBanDoGiaDung.controller;
 import com.example.WebBanDoGiaDung.dto.CartDto;
 import com.example.WebBanDoGiaDung.entity.Account;
 import com.example.WebBanDoGiaDung.entity.Delivery;
-import com.example.WebBanDoGiaDung.security.AccountPrincipal;
-import com.example.WebBanDoGiaDung.service.AccountService;
+import com.example.WebBanDoGiaDung.security.CurrentAccountService;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import com.example.WebBanDoGiaDung.service.CartService;
 import com.example.WebBanDoGiaDung.service.CheckoutService;
 import com.example.WebBanDoGiaDung.service.DeliveryService;
@@ -18,7 +18,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -32,23 +32,18 @@ public class CartController {
     private final DeliveryService deliveryService;
     private final CheckoutService checkoutService;
     private final CartService cartService;
-    private final AccountService accountService;
+    private final CurrentAccountService currentAccountService;
 
     public CartController(ProductService productService,
                           DeliveryService deliveryService,
                           CheckoutService checkoutService,
                           CartService cartService,
-                          AccountService accountService) {
+                          CurrentAccountService currentAccountService) {
         this.productService = productService;
         this.deliveryService = deliveryService;
         this.checkoutService = checkoutService;
         this.cartService = cartService;
-        this.accountService = accountService;
-    }
-
-    @ModelAttribute("cartCount")
-    public int cartCount(HttpSession session) {
-        return cartService.getCartQuantity(session);
+        this.currentAccountService = currentAccountService;
     }
 
     @GetMapping
@@ -65,10 +60,8 @@ public class CartController {
         model.addAttribute("selectedDeliveryId", selectedDelivery != null ? selectedDelivery.getDeliveryId() : null);
         model.addAttribute("shippingFee", shippingFee);
         model.addAttribute("grandTotal", (cart.getSubtotal() != null ? cart.getSubtotal() : 0D) + shippingFee);
-        Account currentUser = resolveCurrentUser(authentication);
-        if (currentUser != null) {
-            model.addAttribute("currentUser", currentUser);
-        }
+        currentAccountService.getCurrentAccount(authentication)
+                .ifPresent(currentUser -> model.addAttribute("currentUser", currentUser));
         return "cart/index";
     }
 
@@ -86,6 +79,21 @@ public class CartController {
         }
         String referer = request.getHeader("Referer");
         return "redirect:" + (referer != null && !referer.isBlank() ? referer : "/cart");
+    }
+
+    @PostMapping("/add-ajax")
+    @ResponseBody
+    public Map<String, Object> addToCartAjax(@RequestParam Integer productId,
+                                             HttpSession session) {
+        Map<Integer, Integer> cart = getCartMap(session);
+        cart.merge(productId, 1, Integer::sum);
+        session.setAttribute(CART_SESSION_KEY, cart);
+
+        return Map.of(
+                "success", true,
+                "cartCount", cartService.getCartQuantity(session),
+                "message", "Đã thêm sản phẩm vào giỏ hàng"
+        );
     }
 
     @PostMapping("/increase")
@@ -122,26 +130,32 @@ public class CartController {
     public String checkout(@RequestParam String paymentMethod,
                            @RequestParam Integer deliveryId,
                            Authentication authentication,
-                           HttpSession session) {
-        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+                           HttpSession session,
+                           RedirectAttributes redirectAttributes) {
+        Account currentUser = currentAccountService.getCurrentAccount(authentication).orElse(null);
+
+        if (currentUser == null) {
             return "redirect:/login";
         }
+
         if (getCartMap(session).isEmpty()) {
             return "redirect:/cart?error=empty_cart";
-        }
-        if (!(authentication.getPrincipal() instanceof AccountPrincipal principal)) {
-            return "redirect:/login";
         }
 
         try {
             if ("COD".equalsIgnoreCase(paymentMethod)) {
-                checkoutService.createCodOrder(principal.getAccount().getAccountId(), deliveryId, session);
+                checkoutService.createCodOrder(currentUser.getAccountId(), deliveryId, session);
                 return "redirect:/profile#order-history";
             }
+
             if ("BANK_TRANSFER".equalsIgnoreCase(paymentMethod)) {
-                Integer orderId = checkoutService.createBankTransferOrder(principal.getAccount().getAccountId(), deliveryId, session).getOrderId();
+                Integer orderId = checkoutService
+                        .createBankTransferOrder(currentUser.getAccountId(), deliveryId, session)
+                        .getOrderId();
+
                 return "redirect:/payment/momo/create?orderId=" + orderId;
             }
+
             return "redirect:/cart?error=invalid_payment";
         } catch (IllegalArgumentException exception) {
             return switch (exception.getMessage()) {
@@ -149,25 +163,18 @@ public class CartController {
                 case "invalid_delivery" -> "redirect:/cart?error=invalid_delivery";
                 case "missing_momo_payment", "missing_cod_payment" -> "redirect:/cart?error=payment_unavailable";
                 case "invalid_product" -> "redirect:/cart?error=invalid_product";
-                default -> "redirect:/profile?error=missing_default_address";
+                case "missing_default_address", "invalid_default_address" -> {
+                    redirectAttributes.addFlashAttribute(
+                            "addressError",
+                            "Bạn cần thêm địa chỉ giao hàng hợp lệ trước khi đặt hàng."
+                    );
+                    yield "redirect:/profile/addresses?addressRequired=true"; //vừa dùng flash attribute, vừa có query param
+                }
+                default -> "redirect:/cart?error=checkout_failed";
             };
         }
     }
 
-    private Account resolveCurrentUser(Authentication authentication) {
-        if (authentication == null || !(authentication.getPrincipal() instanceof AccountPrincipal principal)) {
-            return null;
-        }
-        Integer accountId = principal.getAccount() != null ? principal.getAccount().getAccountId() : null;
-        if (accountId != null) {
-            return accountService.findById(accountId).orElse(null);
-        }
-        String email = principal.getUsername();
-        if (email != null && !email.isBlank()) {
-            return accountService.findByEmail(email.trim()).orElse(null);
-        }
-        return null;
-    }
 
     @SuppressWarnings("unchecked")
     private Map<Integer, Integer> getCartMap(HttpSession session) {
@@ -187,3 +194,6 @@ public class CartController {
         return created;
     }
 }
+
+// CartController sẽ không quan tâm user login bằng form, Google hay JWT nữa
+//lấy user từ file security.CurrentAccountService;

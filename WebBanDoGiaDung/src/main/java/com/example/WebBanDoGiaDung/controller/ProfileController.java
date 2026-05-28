@@ -31,6 +31,9 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
@@ -51,40 +54,79 @@ public class ProfileController {
     private final AccountService accountService;
 
     @GetMapping("/profile")
-    public String profile(Authentication authentication, Model model) {
-        Account account = currentAccountService.getCurrentAccount(authentication).orElse(null);
+    public String profile() {
+        return "redirect:/profile/account";
+    }
 
-        model.addAttribute("account", account);
-        model.addAttribute("currentUser", account);
-        model.addAttribute("displayName", resolveDisplayName(account));
-        model.addAttribute("accountStatusLabel", resolveStatusLabel(account));
+    @GetMapping("/profile/account")
+    public String account(Authentication authentication, Model model) {
+        Account account = getAuthenticatedAccount(authentication);
+
+        if (account == null) {
+            return "redirect:/login";
+        }
+
+        addCommonProfileAttributes(model, account, "account");
 
         if (!model.containsAttribute("profileForm")) {
             model.addAttribute("profileForm", createProfileForm(account));
         }
 
+        return "auth/profile-account";
+    }
+
+    @GetMapping("/profile/orders")
+    public String orders(Authentication authentication,
+                         @RequestParam(defaultValue = "0") int page,
+                         @RequestParam(defaultValue = "5") int size,
+                         Model model) {
+        Account account = getAuthenticatedAccount(authentication);
+
+        if (account == null) {
+            return "redirect:/login";
+        }
+
+        addCommonProfileAttributes(model, account, "orders");
+
+        Pageable pageable = PageRequest.of(Math.max(page, 0), Math.min(size, 10));
+        Page<OrderEntity> orderPage = orderEntityService.findPageByAccountId(account.getAccountId(), pageable);
+
+        model.addAttribute("orders", orderPage.getContent());
+        model.addAttribute("orderPage", orderPage);
+        model.addAttribute("orderDetailsMap", buildOrderDetailsMap(orderPage.getContent()));
+
+        return "auth/profile-orders";
+    }
+
+    @GetMapping("/profile/addresses")
+    public String addresses(Authentication authentication,
+                            @RequestParam(required = false) String addressRequired,
+                            Model model) {
+        Account account = getAuthenticatedAccount(authentication);
+
+        if (account == null) {
+            return "redirect:/login";
+        }
+
+        addCommonProfileAttributes(model, account, "addresses");
+
+        if ("true".equals(addressRequired) && !model.containsAttribute("addressError")) {
+            model.addAttribute("addressError", "Bạn cần thêm địa chỉ giao hàng hợp lệ trước khi đặt hàng.");
+        }
+
         model.addAttribute("addressForm", new ProfileAddressForm());
         model.addAttribute("provinces", provinceService.findAllOrderByName());
+        model.addAttribute("addresses",
+                accountAddressService.getAddressViewsByCurrentAccount(account.getAccountId()));
 
-        model.addAttribute("addresses", account != null
-                ? accountAddressService.getAddressViewsByCurrentAccount(account.getAccountId())
-                : List.of());
-
-        List<OrderEntity> orders = account != null
-                ? orderEntityService.findByAccountId(account.getAccountId())
-                : List.of();
-
-        model.addAttribute("orders", orders);
-        model.addAttribute("orderDetailsMap", buildOrderDetailsMap(orders));
-
-        return "auth/profile";
+        return "auth/profile-addresses";
     }
 
     @PostMapping("/profile/update")
     public String updateProfile(Authentication authentication,
                                 @ModelAttribute("profileForm") ProfileUpdateForm profileForm,
                                 RedirectAttributes redirectAttributes) {
-        Account account = currentAccountService.getCurrentAccount(authentication).orElse(null);
+        Account account = getAuthenticatedAccount(authentication);
 
         if (account == null) {
             return "redirect:/login";
@@ -96,19 +138,19 @@ public class ProfileController {
         if (normalizedName.isEmpty()) {
             redirectAttributes.addFlashAttribute("profileError", "Họ tên không được để trống.");
             redirectAttributes.addFlashAttribute("profileForm", profileForm);
-            return "redirect:/profile#account-info";
+            return "redirect:/profile/account";
         }
 
         if (normalizedPhone.isEmpty()) {
             redirectAttributes.addFlashAttribute("profileError", "Số điện thoại không được để trống.");
             redirectAttributes.addFlashAttribute("profileForm", profileForm);
-            return "redirect:/profile#account-info";
+            return "redirect:/profile/account";
         }
 
         if (!normalizedPhone.matches("\\d{9,11}")) {
             redirectAttributes.addFlashAttribute("profileError", "Số điện thoại phải gồm 9 đến 11 chữ số.");
             redirectAttributes.addFlashAttribute("profileForm", profileForm);
-            return "redirect:/profile#account-info";
+            return "redirect:/profile/account";
         }
 
         account.setName(normalizedName);
@@ -117,14 +159,14 @@ public class ProfileController {
         accountService.save(account);
 
         redirectAttributes.addFlashAttribute("profileSuccess", "Cập nhật thông tin tài khoản thành công.");
-        return "redirect:/profile#account-info";
+        return "redirect:/profile/account";
     }
 
     @PostMapping("/profile/address/add")
     public String addAddress(Authentication authentication,
                              ProfileAddressForm addressForm,
                              RedirectAttributes redirectAttributes) {
-        Account account = currentAccountService.getCurrentAccount(authentication).orElse(null);
+        Account account = getAuthenticatedAccount(authentication);
 
         return handleAddressAction(account, redirectAttributes, () ->
                 accountAddressService.addAddress(account.getAccountId(), addressForm));
@@ -134,7 +176,7 @@ public class ProfileController {
     public String updateAddress(Authentication authentication,
                                 ProfileAddressForm addressForm,
                                 RedirectAttributes redirectAttributes) {
-        Account account = currentAccountService.getCurrentAccount(authentication).orElse(null);
+        Account account = getAuthenticatedAccount(authentication);
 
         return handleAddressAction(account, redirectAttributes, () ->
                 accountAddressService.updateAddress(account.getAccountId(), addressForm));
@@ -144,7 +186,7 @@ public class ProfileController {
     public String deleteAddress(Authentication authentication,
                                 @RequestParam Integer addressId,
                                 RedirectAttributes redirectAttributes) {
-        Account account = currentAccountService.getCurrentAccount(authentication).orElse(null);
+        Account account = getAuthenticatedAccount(authentication);
 
         return handleAddressAction(account, redirectAttributes, () -> {
             accountAddressService.deleteAddress(account.getAccountId(), addressId);
@@ -156,7 +198,7 @@ public class ProfileController {
     public String setDefaultAddress(Authentication authentication,
                                     @RequestParam Integer addressId,
                                     RedirectAttributes redirectAttributes) {
-        Account account = currentAccountService.getCurrentAccount(authentication).orElse(null);
+        Account account = getAuthenticatedAccount(authentication);
 
         return handleAddressAction(account, redirectAttributes, () -> {
             accountAddressService.setDefaultAddress(account.getAccountId(), addressId);
@@ -182,7 +224,7 @@ public class ProfileController {
 
     @GetMapping("/user")
     public String userHome() {
-        return "redirect:/profile";
+        return "redirect:/profile/account";
     }
 
     private String handleAddressAction(Account account,
@@ -199,7 +241,19 @@ public class ProfileController {
             redirectAttributes.addFlashAttribute("addressError", exception.getMessage());
         }
 
-        return "redirect:/profile#address-book";
+        return "redirect:/profile/addresses";
+    }
+
+    private Account getAuthenticatedAccount(Authentication authentication) {
+        return currentAccountService.getCurrentAccount(authentication).orElse(null);
+    }
+
+    private void addCommonProfileAttributes(Model model, Account account, String activeTab) {
+        model.addAttribute("account", account);
+        model.addAttribute("currentUser", account);
+        model.addAttribute("displayName", resolveDisplayName(account));
+        model.addAttribute("accountStatusLabel", resolveStatusLabel(account));
+        model.addAttribute("activeTab", activeTab);
     }
 
     private String resolveDisplayName(Account account) {

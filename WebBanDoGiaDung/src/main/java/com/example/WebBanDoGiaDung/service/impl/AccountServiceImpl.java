@@ -39,4 +39,6 @@ public class AccountServiceImpl extends AbstractCrudService<Account, Integer> im
     public List<Account> findByStatus(String status) {
         return repository.findByStatus(status);
     }
+
+
 }

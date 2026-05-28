@@ -67,45 +67,60 @@ public class MomoServiceImpl implements MomoService {
             );
         }
 
+        String safePartnerCode = partnerCode.trim();
+        String safeAccessKey = accessKey.trim();
+        String safeSecretKey = secretKey.trim();
+        String safeRedirectUrl = redirectUrl.trim();
+        String safeIpnUrl = ipnUrl.trim();
+        String safeRequestType = requestType.trim();
+
         String internalOrderId = String.valueOf(orderId);
         String momoOrderId = buildMomoOrderId(orderId);
         String requestId = momoOrderId;
         String orderInfo = "Thanh toan don hang #" + orderId;
-        String extraData = "internalOrderId=" + internalOrderId;
-        String amountText = normalizedAmount.toPlainString();
 
-        String rawSignature = "accessKey=" + accessKey
+// Để rỗng cho dễ ký đúng. Internal order đã nằm trong ORDER-116-timestamp rồi.
+        String extraData = "";
+
+        String amountText = normalizedAmount.toPlainString();
+        Long amountValue = normalizedAmount.longValueExact();
+
+        String rawSignature = "accessKey=" + safeAccessKey
                 + "&amount=" + amountText
                 + "&extraData=" + extraData
-                + "&ipnUrl=" + ipnUrl
+                + "&ipnUrl=" + safeIpnUrl
                 + "&orderId=" + momoOrderId
                 + "&orderInfo=" + orderInfo
-                + "&partnerCode=" + partnerCode
-                + "&redirectUrl=" + redirectUrl
+                + "&partnerCode=" + safePartnerCode
+                + "&redirectUrl=" + safeRedirectUrl
                 + "&requestId=" + requestId
-                + "&requestType=" + requestType;
+                + "&requestType=" + safeRequestType;
 
-        String signature = hmacSha256(rawSignature, secretKey);
-        Map<String, String> requestBody = new LinkedHashMap<>();
-        requestBody.put("partnerCode", partnerCode);
+        String signature = hmacSha256(rawSignature, safeSecretKey);
+        Map<String, Object> requestBody = new LinkedHashMap<>();
+        requestBody.put("partnerCode", safePartnerCode);
         requestBody.put("partnerName", "WebBanDoGiaDung");
         requestBody.put("storeId", "WebBanDoGiaDung");
         requestBody.put("requestId", requestId);
-        requestBody.put("amount", amountText);
+        requestBody.put("amount", amountValue);
         requestBody.put("orderId", momoOrderId);
         requestBody.put("orderInfo", orderInfo);
-        requestBody.put("redirectUrl", redirectUrl);
-        requestBody.put("ipnUrl", ipnUrl);
+        requestBody.put("redirectUrl", safeRedirectUrl);
+        requestBody.put("ipnUrl", safeIpnUrl);
         requestBody.put("lang", "vi");
         requestBody.put("extraData", extraData);
-        requestBody.put("requestType", requestType);
+        requestBody.put("requestType", safeRequestType);
         requestBody.put("signature", signature);
         String body = toJson(requestBody);
 
-        log.info("MoMo create request: endpoint={}, partnerCode={}, requestId={}, amount={}, momoOrderId={}, internalOrderId={}, orderInfo={}, redirectUrl={}, ipnUrl={}, requestType={}, extraData={}, lang=vi",
-                endpoint, partnerCode, requestId, amountText, momoOrderId, internalOrderId, orderInfo, redirectUrl, ipnUrl, requestType, extraData);
-        log.info("MoMo raw signature: {}", rawSignature);
+        log.info("MoMo create request: endpoint={}, partnerCode={}, requestId={}, amount={}, momoOrderId={}, internalOrderId={}, requestType={}, lang=vi",
+                endpoint, mask(partnerCode), requestId, amountText, momoOrderId, internalOrderId, requestType);
 
+        log.debug("MoMo raw signature fields prepared for requestId={}, orderId={}", requestId, momoOrderId);
+        log.info("MoMo config loaded: partnerCode={}, accessKeyLength={}, secretKeyLength={}",
+                partnerCode,
+                accessKey != null ? accessKey.length() : 0,
+                secretKey != null ? secretKey.length() : 0);
         try {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(endpoint))
@@ -242,18 +257,28 @@ public class MomoServiceImpl implements MomoService {
         }
     }
 
-    private String toJson(Map<String, String> data) {
+    private String toJson(Map<String, Object> data) {
         StringBuilder builder = new StringBuilder("{");
         boolean first = true;
-        for (Map.Entry<String, String> entry : data.entrySet()) {
+
+        for (Map.Entry<String, Object> entry : data.entrySet()) {
             if (!first) {
                 builder.append(',');
             }
+
             first = false;
-            builder.append('"').append(escape(entry.getKey())).append('"')
-                    .append(':')
-                    .append('"').append(escape(entry.getValue())).append('"');
+
+            builder.append('"').append(escape(entry.getKey())).append('"').append(':');
+
+            Object value = entry.getValue();
+
+            if (value instanceof Number || value instanceof Boolean) {
+                builder.append(value);
+            } else {
+                builder.append('"').append(escape(value != null ? value.toString() : "")).append('"');
+            }
         }
+
         builder.append('}');
         return builder.toString();
     }
@@ -302,5 +327,17 @@ public class MomoServiceImpl implements MomoService {
 
     private String escape(String value) {
         return value == null ? "" : value.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    private String mask(String value) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+
+        if (value.length() <= 6) {
+            return "***";
+        }
+
+        return value.substring(0, 3) + "***" + value.substring(value.length() - 3);
     }
 }

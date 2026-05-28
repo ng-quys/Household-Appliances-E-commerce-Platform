@@ -237,6 +237,8 @@ public class AccountAddressServiceImpl extends AbstractCrudService<AccountAddres
     private record AddressLocation(Province province, District district, Ward ward) {
     }
 
+
+    //giúp chặn trước khi save OrderAddress, tránh lỗi database kiểu foreign key constraint fails
     @Override
     public void validateAddressUsableForCheckout(AccountAddress address) {
         if (address == null) {

@@ -1,45 +1,46 @@
 package com.example.WebBanDoGiaDung.controller;
 
 import com.example.WebBanDoGiaDung.dto.ProductCacheDto;
-import com.example.WebBanDoGiaDung.entity.Account;
 import com.example.WebBanDoGiaDung.entity.Genre;
-import com.example.WebBanDoGiaDung.entity.Product;
-import com.example.WebBanDoGiaDung.security.AccountPrincipal;
-import com.example.WebBanDoGiaDung.service.AccountService;
+import com.example.WebBanDoGiaDung.security.CurrentAccountService;
 import com.example.WebBanDoGiaDung.service.GenreService;
 import com.example.WebBanDoGiaDung.service.ProductService;
 import java.util.List;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
 @RequestMapping("/products")
 public class ProductController {
 
+    private static final int DEFAULT_PAGE_SIZE = 12;
+    private static final int MAX_PAGE_SIZE = 50;
+
     private final ProductService productService;
-    private final AccountService accountService;
     private final GenreService genreService;
+    private final CurrentAccountService currentAccountService;
 
     public ProductController(ProductService productService,
-                             AccountService accountService,
-                             GenreService genreService) {
+                             GenreService genreService,
+                             CurrentAccountService currentAccountService) {
         this.productService = productService;
-        this.accountService = accountService;
         this.genreService = genreService;
+        this.currentAccountService = currentAccountService;
     }
 
-    // Thêm method này vào class
     @ModelAttribute("genres")
     public List<Genre> getAllGenres() {
-        return genreService.findAll();   // hoặc genreService.findAllActive()
+        return genreService.findAll();
     }
 
     @GetMapping
@@ -51,46 +52,34 @@ public class ProductController {
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "12") int size,
                         @RequestParam(required = false) String sort,
-                        Model model, Authentication authentication) {
+                        Model model,
+                        Authentication authentication) {
 
         Pageable pageable = createPageable(page, size, sort);
+
         Page<ProductCacheDto> productPage = productService.searchProducts(
-                keyword, genreId, brandId, minPrice, maxPrice, pageable);
+                keyword,
+                genreId,
+                brandId,
+                minPrice,
+                maxPrice,
+                pageable
+        );
 
-        model.addAttribute("products", productPage.getContent());
-        model.addAttribute("productPage", productPage);
-        model.addAttribute("keyword", keyword);
-        model.addAttribute("genreId", genreId);
-        model.addAttribute("brandId", brandId);
-        model.addAttribute("minPrice", minPrice);
-        model.addAttribute("maxPrice", maxPrice);
-        model.addAttribute("sort", sort);
+        addProductListAttributes(
+                model,
+                productPage,
+                keyword,
+                genreId,
+                brandId,
+                minPrice,
+                maxPrice,
+                sort
+        );
 
         addCurrentUser(model, authentication);
+
         return "product/index";
-    }
-
-    // Giữ lại details
-    @GetMapping("/{id}")
-    public String details(@PathVariable Integer id, Model model, Authentication authentication) {
-        ProductCacheDto product = productService.findProductDetailById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Product not found: " + id));
-        model.addAttribute("product", product);
-        addCurrentUser(model, authentication);
-        return "product/details";
-    }
-
-    // Helper tạo Pageable + Sort
-    private Pageable createPageable(int page, int size, String sort) {
-        Sort sortOption = Sort.unsorted();
-        if ("priceAsc".equalsIgnoreCase(sort)) {
-            sortOption = Sort.by("price").ascending();
-        } else if ("priceDesc".equalsIgnoreCase(sort)) {
-            sortOption = Sort.by("price").descending();
-        } else if ("newest".equalsIgnoreCase(sort)) {
-            sortOption = Sort.by("createAt").descending();
-        }
-        return PageRequest.of(page, Math.min(size, 50), sortOption);
     }
 
     @GetMapping("/search")
@@ -102,11 +91,80 @@ public class ProductController {
                          @RequestParam(defaultValue = "0") int page,
                          @RequestParam(defaultValue = "12") int size,
                          @RequestParam(required = false) String sort,
-                         Model model, Authentication authentication) {
+                         Model model,
+                         Authentication authentication) {
 
         Pageable pageable = createPageable(page, size, sort);
-        Page<ProductCacheDto> productPage = productService.searchProducts(keyword, genreId, brandId, minPrice, maxPrice, pageable);
 
+        Page<ProductCacheDto> productPage = productService.searchProducts(
+                keyword,
+                genreId,
+                brandId,
+                minPrice,
+                maxPrice,
+                pageable
+        );
+
+        addProductListAttributes(
+                model,
+                productPage,
+                keyword,
+                genreId,
+                brandId,
+                minPrice,
+                maxPrice,
+                sort
+        );
+
+        addCurrentUser(model, authentication);
+
+        return "product/search";
+    }
+
+    @GetMapping("/{id}")
+    public String details(@PathVariable Integer id,
+                          Model model,
+                          Authentication authentication) {
+        ProductCacheDto product = productService.findProductDetailById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Product not found: " + id));
+
+        model.addAttribute("product", product);
+
+        addCurrentUser(model, authentication);
+
+        return "product/details";
+    }
+
+    @GetMapping("/ajax")
+    public String ajax() {
+        return "product/ajax";
+    }
+
+    private Pageable createPageable(int page, int size, String sort) {
+        int safePage = Math.max(page, 0);
+        int safeSize = size <= 0 ? DEFAULT_PAGE_SIZE : Math.min(size, MAX_PAGE_SIZE);
+
+        Sort sortOption = Sort.unsorted();
+
+        if ("priceAsc".equalsIgnoreCase(sort)) {
+            sortOption = Sort.by("price").ascending();
+        } else if ("priceDesc".equalsIgnoreCase(sort)) {
+            sortOption = Sort.by("price").descending();
+        } else if ("newest".equalsIgnoreCase(sort)) {
+            sortOption = Sort.by("createAt").descending();
+        }
+
+        return PageRequest.of(safePage, safeSize, sortOption);
+    }
+
+    private void addProductListAttributes(Model model,
+                                          Page<ProductCacheDto> productPage,
+                                          String keyword,
+                                          Integer genreId,
+                                          Integer brandId,
+                                          Double minPrice,
+                                          Double maxPrice,
+                                          String sort) {
         model.addAttribute("products", productPage.getContent());
         model.addAttribute("productPage", productPage);
         model.addAttribute("keyword", keyword);
@@ -115,56 +173,10 @@ public class ProductController {
         model.addAttribute("minPrice", minPrice);
         model.addAttribute("maxPrice", maxPrice);
         model.addAttribute("sort", sort);
-        addCurrentUser(model, authentication);
-        return "product/search";
     }
-
-
-
-
-    @GetMapping("/ajax")
-    public String ajax() {
-        return "product/ajax";
-    }
-
-
 
     private void addCurrentUser(Model model, Authentication authentication) {
-        Account currentUser = resolveCurrentUser(authentication);
-        if (currentUser != null) {
-            model.addAttribute("currentUser", currentUser);
-        }
+        currentAccountService.getCurrentAccount(authentication)
+                .ifPresent(currentUser -> model.addAttribute("currentUser", currentUser));
     }
-
-    private Account resolveCurrentUser(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
-            return null;
-        }
-
-        Object principal = authentication.getPrincipal();
-        Integer accountId = null;
-        String email = null;
-
-        if (principal instanceof AccountPrincipal accountPrincipal) {
-            accountId = accountPrincipal.getAccount() != null ? accountPrincipal.getAccount().getAccountId() : null;
-            email = accountPrincipal.getUsername();
-        } else if (principal instanceof AccountPrincipal accountPrincipal) {
-            accountId = accountPrincipal.getAccount() != null ? accountPrincipal.getAccount().getAccountId() : null;
-            email = accountPrincipal.getUsername();
-        } else if (principal instanceof UserDetails userDetails) {
-            email = userDetails.getUsername();
-        } else if (authentication.getName() != null && !authentication.getName().isBlank()) {
-            email = authentication.getName();
-        }
-
-        if (accountId != null) {
-            return accountService.findById(accountId).orElse(null);
-        }
-        if (email != null && !email.isBlank()) {
-            return accountService.findByEmail(email.trim()).orElse(null);
-        }
-        return null;
-    }
-
-
 }

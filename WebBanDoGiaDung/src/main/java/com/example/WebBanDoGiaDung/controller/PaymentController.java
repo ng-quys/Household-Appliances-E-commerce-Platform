@@ -1,14 +1,14 @@
 package com.example.WebBanDoGiaDung.controller;
 
 import com.example.WebBanDoGiaDung.dto.OrderEmailEvent;
+import com.example.WebBanDoGiaDung.entity.OderDetail;
+import com.example.WebBanDoGiaDung.service.OderDetailService;
 import com.example.WebBanDoGiaDung.entity.OrderEntity;
-import com.example.WebBanDoGiaDung.service.MomoPaymentException;
-import com.example.WebBanDoGiaDung.service.MomoService;
-import com.example.WebBanDoGiaDung.service.OrderEmailPublisher;
-import com.example.WebBanDoGiaDung.service.OrderEntityService;
+import com.example.WebBanDoGiaDung.service.*;
 import jakarta.servlet.http.HttpSession;
 import java.math.BigDecimal;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.springframework.http.ResponseEntity;
@@ -27,13 +27,16 @@ public class PaymentController {
     private final OrderEntityService orderEntityService;
     private final MomoService momoService;
     private final OrderEmailPublisher orderEmailPublisher;
+    private final OderDetailService oderDetailService;
 
     public PaymentController(OrderEntityService orderEntityService,
                              MomoService momoService,
-                             OrderEmailPublisher orderEmailPublisher) {
+                             OrderEmailPublisher orderEmailPublisher,
+                             OderDetailService oderDetailService) {
         this.orderEntityService = orderEntityService;
         this.momoService = momoService;
         this.orderEmailPublisher = orderEmailPublisher;
+        this.oderDetailService = oderDetailService;
     }
 
     @GetMapping("/momo/create")
@@ -95,6 +98,10 @@ public class PaymentController {
         model.addAttribute("resultCode", resultCode);
         model.addAttribute("momoOrderId", momoOrderId);
         model.addAttribute("momoTransactionId", transId);
+
+        List<OderDetail> orderDetails = oderDetailService.findByOrderId(internalOrderId);
+        model.addAttribute("orderDetails", orderDetails);
+
         return "payment/result";
     }
 

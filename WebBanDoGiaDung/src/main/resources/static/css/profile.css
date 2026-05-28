@@ -38,7 +38,10 @@ body.profile-page {
 .profile-sidebar {
     padding: 1.5rem;
     position: sticky;
-    top: 1.5rem;
+    top: 120px;
+    align-self: flex-start;
+    max-height: calc(100vh - 140px);
+    overflow-y: auto;
 }
 
 .profile-greeting {
@@ -89,6 +92,11 @@ body.profile-page {
 
 .profile-section + .profile-section {
     margin-top: 1.5rem;
+
+}
+
+.profile-section {
+    scroll-margin-top: 96px;
 }
 
 .profile-section-title {

@@ -22,6 +22,9 @@ body.home-page {
     background: linear-gradient(135deg, #0f3cc9, #1d4ed8 60%, #2563eb);
     color: #fff;
     box-shadow: 0 10px 30px rgba(17, 60, 252, 0.18);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
 }
 
 .brand-text {
@@ -300,6 +303,16 @@ body.home-page {
     display: flex;
     gap: 0.65rem;
     margin-top: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.product-actions form {
+    margin: 0;
+}
+
+.product-actions .btn {
+    min-height: 38px;
 }
 
 .sort-form {
@@ -652,4 +665,28 @@ body.home-page {
     .product-detail-page .d-flex.gap-3.mb-4 button {
         width: 100%;
     }
+
+}
+
+.product-image-link,
+.product-name-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.product-image-link {
+    cursor: pointer;
+}
+
+.product-image-link img {
+    transition: transform 0.2s ease;
+}
+
+.product-image-link:hover img {
+    transform: scale(1.03);
+}
+
+.product-name-link:hover .product-name {
+    color: #0d6efd;
 }
