@@ -172,8 +172,8 @@ public class AdminAccountManagementController {
         user.setUpdateAt(LocalDateTime.now());
         String actor = "admin";
         if (authentication != null && authentication.getPrincipal() instanceof AccountPrincipal principal) {
-            if (principal.getAccount().getEmail() != null && !principal.getAccount().getEmail().isBlank()) {
-                actor = principal.getAccount().getEmail();
+            if (principal.getEmail() != null && !principal.getEmail().isBlank()) {
+                actor = principal.getEmail();
             }
         }
         user.setUpdateBy(actor);
@@ -181,7 +181,7 @@ public class AdminAccountManagementController {
 
     private Integer resolveCurrentAccountId(Authentication authentication) {
         if (authentication != null && authentication.getPrincipal() instanceof AccountPrincipal principal) {
-            return principal.getAccount().getAccountId();
+            return principal.getAccountId();
         }
         return null;
     }

@@ -23,6 +23,7 @@ public interface ProductService extends CrudService<Product, Integer> {
 
     List<ProductCacheDto> findActiveProductsByGenreId(Integer genreId);
 
+    List<ProductCacheDto> findHeaderPreviewProductsByGenreId(Integer genreId, int limit);
 
     List<ProductCacheDto> findFeaturedProducts(int limit);
 

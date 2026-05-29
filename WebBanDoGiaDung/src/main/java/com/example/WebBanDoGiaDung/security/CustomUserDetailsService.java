@@ -2,6 +2,7 @@ package com.example.WebBanDoGiaDung.security;
 
 import com.example.WebBanDoGiaDung.entity.Account;
 import com.example.WebBanDoGiaDung.repository.AccountRepository;
+import com.example.WebBanDoGiaDung.security.dto.AccountSessionDto;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -21,5 +22,6 @@ public class CustomUserDetailsService implements UserDetailsService {
         Account account = accountRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("Account not found with email: " + email));
 
-        return new AccountPrincipal(account);    }
+        return new AccountPrincipal(AccountSessionDto.fromAccount(account), account.getPassword());
+    }
 }

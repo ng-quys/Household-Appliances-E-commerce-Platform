@@ -2,6 +2,7 @@ package com.example.WebBanDoGiaDung.security;
 
 import com.example.WebBanDoGiaDung.entity.Account;
 import com.example.WebBanDoGiaDung.repository.AccountRepository;
+import com.example.WebBanDoGiaDung.security.dto.AccountSessionDto;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
@@ -70,6 +71,6 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         System.out.println("✅ OAuth2 User Loaded: " + email + " | Attributes: " + attributes.keySet());
 
         // Trả về CustomUserDetails có cả UserDetails + OAuth2User
-        return new AccountPrincipal(account, attributes);
+        return new AccountPrincipal(AccountSessionDto.fromAccount(account), account.getPassword(), attributes);
     }
 }

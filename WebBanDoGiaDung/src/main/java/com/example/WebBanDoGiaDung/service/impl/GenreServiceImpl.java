@@ -37,6 +37,11 @@ public class GenreServiceImpl extends AbstractCrudService<Genre, Integer> implem
     }
 
     @Override
+    public List<GenreCacheDto> findHeaderGenres() {
+        return findAllGenreSummaries();
+    }
+
+    @Override
     @CacheEvict(cacheNames = "genreList", allEntries = true)
     public Genre save(Genre entity) {
         return repository.save(entity);

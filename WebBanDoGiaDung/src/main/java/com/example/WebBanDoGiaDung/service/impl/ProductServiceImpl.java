@@ -73,6 +73,18 @@ public class ProductServiceImpl extends AbstractCrudService<Product, Integer> im
     }
 
     @Override
+    public List<ProductCacheDto> findHeaderPreviewProductsByGenreId(Integer genreId, int limit) {
+        return findActiveProductsByGenreId(genreId).stream()
+                .sorted((left, right) -> {
+                    long rightScore = right.getBuyturn() == null ? 0L : right.getBuyturn();
+                    long leftScore = left.getBuyturn() == null ? 0L : left.getBuyturn();
+                    return Long.compare(rightScore, leftScore);
+                })
+                .limit(Math.max(limit, 0))
+                .toList();
+    }
+
+    @Override
     public List<ProductCacheDto> findFeaturedProducts(int limit) {
         return findActiveProductCards().stream()
                 .sorted((left, right) -> {

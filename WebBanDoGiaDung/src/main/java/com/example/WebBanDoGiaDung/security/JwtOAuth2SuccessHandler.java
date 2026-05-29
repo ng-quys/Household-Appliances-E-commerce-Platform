@@ -60,7 +60,14 @@ public class JwtOAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandl
         Object principal = authentication.getPrincipal();
 
         if (principal instanceof AccountPrincipal custom) {
-            return custom.getAccount();
+            Integer accountId = custom.getAccountId();
+            if (accountId != null) {
+                return accountService.findById(accountId).orElse(null);
+            }
+            String email = custom.getEmail();
+            if (email != null) {
+                return accountService.findByEmail(email).orElse(null);
+            }
         }
 
         if (principal instanceof OAuth2User oAuth2User) {

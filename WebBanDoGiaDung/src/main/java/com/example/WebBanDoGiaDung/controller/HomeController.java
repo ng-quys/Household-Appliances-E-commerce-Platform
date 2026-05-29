@@ -43,10 +43,30 @@ public class HomeController {
 
     @GetMapping({"", "/home", "/home/index"})
     public String index(Model model, Authentication authentication) {
-        List<GenreCacheDto> genres = genreService.findAllGenreSummaries().stream()
-                .sorted(Comparator.comparing(g -> g.getGenreName() == null ? "" : g.getGenreName()))
-                .toList();
         List<ProductCacheDto> featuredProducts = productService.findFeaturedProducts(8);
+
+        List<GenreCacheDto> genres = featuredProducts.stream()
+                .filter(product -> product.getId() != null)
+                .collect(Collectors.toMap(
+                        ProductCacheDto::getId,
+                        product -> new GenreCacheDto(
+                                product.getId(),
+                                product.getGenreName()
+                        ),
+                        (oldValue, newValue) -> oldValue,
+                        java.util.LinkedHashMap::new
+                ))
+                .values()
+                .stream()
+                .limit(12)
+                .toList();
+
+        if (genres.isEmpty()) {
+            genres = genreService.findAllGenreSummaries().stream()
+                    .sorted(Comparator.comparing(g -> g.getGenreName() == null ? "" : g.getGenreName()))
+                    .limit(12)
+                    .toList();
+        }
         List<ProductCacheDto> latestProducts = productService.findActiveProductCards().stream()
                 .limit(12)
                 .toList();
@@ -111,7 +131,7 @@ public class HomeController {
         if (authentication == null || !(authentication.getPrincipal() instanceof AccountPrincipal principal)) {
             return null;
         }
-        Integer accountId = principal.getAccount() != null ? principal.getAccount().getAccountId() : null;
+        Integer accountId = principal.getAccountId();
         if (accountId != null) {
             return accountService.findById(accountId).orElse(null);
         }

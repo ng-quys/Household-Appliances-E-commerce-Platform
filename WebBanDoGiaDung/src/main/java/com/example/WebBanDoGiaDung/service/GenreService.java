@@ -9,4 +9,6 @@ public interface GenreService extends CrudService<Genre, Integer> {
     Optional<Genre> findByGenreName(String genreName);
 
     List<GenreCacheDto> findAllGenreSummaries();
+
+    List<GenreCacheDto> findHeaderGenres();
 }

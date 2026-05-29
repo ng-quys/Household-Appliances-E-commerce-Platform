@@ -13,17 +13,79 @@
 </head>
 <body class="home-page">
 <header class="top-header">
-    <div class="container py-3">
-        <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-3 justify-content-between">
+    <div class="container py-2">
+        <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-2 justify-content-between">
             <div>
                 <a class="brand-text text-decoration-none" th:href="@{/}">Điện Máy Gia Dụng</a>
                 <div class="brand-subtitle">Mua sắm tiện nghi, giá tốt mỗi ngày</div>
             </div>
 
-            <form class="search-bar" th:action="@{/products/search}" method="get">
-                <input type="text" name="keyword" class="form-control" placeholder="Tìm nồi cơm điện, máy giặt, tủ lạnh...">
-                <button type="submit" class="btn btn-warning fw-semibold">Tìm kiếm</button>
-            </form>
+            <div class="header-search-group">
+                <div class="category-menu-wrapper">
+                    <button type="button"
+                            class="category-menu-toggle"
+                            data-category-toggle
+                            aria-expanded="false"
+                            aria-controls="header-category-menu">
+                        ☰ Danh mục
+                    </button>
+
+                    <div id="header-category-menu" class="category-mega-menu" data-category-menu>
+                        <div class="category-menu-column category-menu-main-column">
+                            <div class="category-menu-title">Danh mục</div>
+                            <div th:if="${#lists.isEmpty(headerGenres)}" class="category-menu-empty">Chưa có danh mục</div>
+                            <a th:if="${!#lists.isEmpty(headerGenres)}"
+                               th:each="genre, iterStat : ${headerGenres}"
+                               class="category-menu-item"
+                               th:classappend="${iterStat.index == 0} ? ' is-active' : ''"
+                               th:href="@{/products(genreId=${genre.genreId})}"
+                               th:attr="data-genre-tab=${genre.genreId}"
+                               th:text="${genre.genreName}">Danh mục</a>
+                        </div>
+                        <div class="category-menu-column category-menu-side-column">
+                            <div th:if="${#lists.isEmpty(headerGenres)}" class="category-menu-empty">Chưa có sản phẩm trong danh mục này</div>
+
+                            <div th:if="${!#lists.isEmpty(headerGenres)}"
+                                 th:each="genre, iterStat : ${headerGenres}"
+                                 class="category-preview-panel"
+                                 th:classappend="${iterStat.index == 0} ? ' is-active' : ''"
+                                 th:attr="data-genre-panel=${genre.genreId}">
+                                <div class="category-preview-header">
+                                    <div>
+                                        <div class="category-menu-title mb-1" th:text="${genre.genreName}">Danh mục</div>
+                                        <div class="category-preview-subtitle">Sản phẩm nổi bật trong danh mục này</div>
+                                    </div>
+                                    <a th:href="@{/products(genreId=${genre.genreId})}" class="category-menu-side-link">Xem tất cả</a>
+                                </div>
+
+                                <div th:if="${#lists.isEmpty(headerGenreProducts[genre.genreId])}" class="category-menu-empty">
+                                    Chưa có sản phẩm trong danh mục này
+                                </div>
+
+                                <div th:if="${!#lists.isEmpty(headerGenreProducts[genre.genreId])}" class="category-product-grid">
+                                    <a th:each="product : ${headerGenreProducts[genre.genreId]}"
+                                       class="category-product-card"
+                                       th:href="@{/products/{id}(id=${product.id})}">
+                                        <div class="category-product-thumb">
+                                            <img th:if="${product.imageUrl != null && !#strings.isEmpty(#strings.trim(product.imageUrl))}"
+                                                 th:src="${product.imageUrl}"
+                                                 th:alt="${product.name}">
+                                            <div th:if="${product.imageUrl == null || #strings.isEmpty(#strings.trim(product.imageUrl))}"
+                                                 class="category-product-fallback">SP</div>
+                                        </div>
+                                        <div class="category-product-name" th:text="${product.name}">Tên sản phẩm</div>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <form class="search-bar" th:action="@{/products/search}" method="get">
+                    <input type="text" name="keyword" class="form-control" placeholder="Tìm nồi cơm điện, máy giặt, tủ lạnh...">
+                    <button type="submit" class="btn btn-warning fw-semibold">Tìm kiếm</button>
+                </form>
+            </div>
 
             <div class="header-actions">
                 <a class="header-link" th:href="@{/products}">Sản phẩm</a>
@@ -54,6 +116,9 @@
             </div>
         </div>
     </div>
+    <span class="badge bg-light text-dark" th:text="'Node: ' + ${nodePort}">
+    Node
+</span>
 </header>
 
 <main>
@@ -95,7 +160,8 @@
             </div>
             <div class="row g-3 mt-1">
                 <div class="col-6 col-md-4 col-xl-2" th:each="genre : ${genres}">
-                    <a class="category-card text-decoration-none" th:href="@{/products}">
+                    <a class="category-card text-decoration-none"
+                       th:href="@{/products(genreId=${genre.genreId})}">
                         <div class="category-icon">⚡</div>
                         <div class="category-name" th:text="${genre.genreName}">Danh mục</div>
                     </a>
@@ -149,7 +215,7 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Danh mục</label>
-                        <select class="form-select" name="genre">
+                        <select class="form-select" name="genreId">
                             <option value="">Tất cả danh mục</option>
                             <option th:each="genre : ${genres}" th:value="${genre.genreId}" th:text="${genre.genreName}"></option>
                         </select>
@@ -285,6 +351,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/category-menu.js}"></script>
 <script th:src="@{/js/ai-chatbox.js}"></script>
 <script th:src="@{/js/cart-ajax.js}"></script>
 </body>
