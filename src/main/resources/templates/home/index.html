@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Bán Đồ Gia Dụng</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/home.css}">
+    <link  th:href="@{/js/ai-chatbox.js}">
+</head>
+<body class="home-page">
+<header class="top-header">
+    <div class="container py-2">
+        <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-2 justify-content-between">
+            <div>
+                <a class="brand-text text-decoration-none" th:href="@{/}">Điện Máy Gia Dụng</a>
+                <div class="brand-subtitle">Mua sắm tiện nghi, giá tốt mỗi ngày</div>
+            </div>
+
+            <div class="header-search-group">
+                <div class="category-menu-wrapper">
+                    <button type="button"
+                            class="category-menu-toggle"
+                            data-category-toggle
+                            aria-expanded="false"
+                            aria-controls="header-category-menu">
+                        ☰ Danh mục
+                    </button>
+
+                    <div id="header-category-menu" class="category-mega-menu" data-category-menu>
+                        <div class="category-menu-column category-menu-main-column">
+                            <div class="category-menu-title">Danh mục</div>
+                            <div th:if="${#lists.isEmpty(headerGenres)}" class="category-menu-empty">Chưa có danh mục</div>
+                            <a th:if="${!#lists.isEmpty(headerGenres)}"
+                               th:each="genre, iterStat : ${headerGenres}"
+                               class="category-menu-item"
+                               th:classappend="${iterStat.index == 0} ? ' is-active' : ''"
+                               th:href="@{/products(genreId=${genre.genreId})}"
+                               th:attr="data-genre-tab=${genre.genreId}"
+                               th:text="${genre.genreName}">Danh mục</a>
+                        </div>
+                        <div class="category-menu-column category-menu-side-column">
+                            <div th:if="${#lists.isEmpty(headerGenres)}" class="category-menu-empty">Chưa có sản phẩm trong danh mục này</div>
+
+                            <div th:if="${!#lists.isEmpty(headerGenres)}"
+                                 th:each="genre, iterStat : ${headerGenres}"
+                                 class="category-preview-panel"
+                                 th:classappend="${iterStat.index == 0} ? ' is-active' : ''"
+                                 th:attr="data-genre-panel=${genre.genreId}">
+                                <div class="category-preview-header">
+                                    <div>
+                                        <div class="category-menu-title mb-1" th:text="${genre.genreName}">Danh mục</div>
+                                        <div class="category-preview-subtitle">Sản phẩm nổi bật trong danh mục này</div>
+                                    </div>
+                                    <a th:href="@{/products(genreId=${genre.genreId})}" class="category-menu-side-link">Xem tất cả</a>
+                                </div>
+
+                                <div th:if="${#lists.isEmpty(headerGenreProducts[genre.genreId])}" class="category-menu-empty">
+                                    Chưa có sản phẩm trong danh mục này
+                                </div>
+
+                                <div th:if="${!#lists.isEmpty(headerGenreProducts[genre.genreId])}" class="category-product-grid">
+                                    <a th:each="product : ${headerGenreProducts[genre.genreId]}"
+                                       class="category-product-card"
+                                       th:href="@{/products/{id}(id=${product.id})}">
+                                        <div class="category-product-thumb">
+                                            <img th:if="${product.imageUrl != null && !#strings.isEmpty(#strings.trim(product.imageUrl))}"
+                                                 th:src="${product.imageUrl}"
+                                                 th:alt="${product.name}">
+                                            <div th:if="${product.imageUrl == null || #strings.isEmpty(#strings.trim(product.imageUrl))}"
+                                                 class="category-product-fallback">SP</div>
+                                        </div>
+                                        <div class="category-product-name" th:text="${product.name}">Tên sản phẩm</div>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <form class="search-bar" th:action="@{/products/search}" method="get">
+                    <input type="text" name="keyword" class="form-control" placeholder="Tìm nồi cơm điện, máy giặt, tủ lạnh...">
+                    <button type="submit" class="btn btn-warning fw-semibold">Tìm kiếm</button>
+                </form>
+            </div>
+
+            <div class="header-actions">
+                <a class="header-link" th:href="@{/products}">Sản phẩm</a>
+                <a class="header-link" th:href="@{/cart}">
+                    Giỏ hàng
+                    <span id="cartCountBadge"
+                          th:classappend="${cartCount == null || cartCount <= 0} ? ' d-none' : ''"
+                          th:text="'(' + ${cartCount != null ? cartCount : 0} + ')'">
+                    (0)
+                    </span>
+                </a>
+                <a class="header-link admin-link" sec:authorize="hasRole('ADMIN')" th:href="@{/admin}">Quản trị</a>
+
+                <div sec:authorize="isAnonymous()" class="d-flex gap-2">
+                    <a class="btn btn-outline-light" th:href="@{/login}">Đăng nhập</a>
+                    <a class="btn btn-light text-primary fw-semibold" th:href="@{/register}">Đăng ký</a>
+                </div>
+
+                <a sec:authorize="isAuthenticated()" class="profile-chip" th:href="@{/profile}">
+                    <span class="profile-chip-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" stroke="currentColor" stroke-width="1.8"/>
+                            <path d="M4 21C4 17.6863 7.58172 15 12 15C16.4183 15 20 17.6863 20 21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                        </svg>
+                    </span>
+                    <span class="profile-chip-name" th:text="${currentUser != null && currentUser.name != null && !#strings.isEmpty(#strings.trim(currentUser.name)) ? #strings.trim(currentUser.name) : (currentUser != null && currentUser.email != null && !#strings.isEmpty(#strings.trim(currentUser.email)) ? #strings.trim(currentUser.email) : #authentication.name)}">Người dùng</span>
+                </a>
+            </div>
+        </div>
+    </div>
+    <span class="badge bg-light text-dark" th:text="'Node: ' + ${nodePort}">
+    Node
+</span>
+</header>
+
+<main>
+    <section class="hero-section">
+        <div class="container">
+            <div class="row align-items-center g-4">
+                <div class="col-lg-7">
+                    <div class="hero-badge">Siêu sale điện máy</div>
+                    <h1>Siêu sale đồ gia dụng cho căn bếp và tổ ấm của bạn</h1>
+                    <p>Săn deal máy giặt, tủ lạnh, nồi cơm điện, quạt máy và hàng loạt thiết bị gia dụng chính hãng với giá cực tốt.</p>
+                    <div class="d-flex flex-wrap gap-3">
+                        <a class="btn btn-warning btn-lg fw-semibold" th:href="@{/products}">Xem sản phẩm</a>
+                        <a class="btn btn-outline-light btn-lg fw-semibold" href="#filters">Lọc nhanh</a>
+                    </div>
+                </div>
+                <div class="col-lg-5">
+                    <div class="hero-card">
+                        <div class="hero-card-title">Ưu đãi nổi bật hôm nay</div>
+                        <ul class="hero-points">
+                            <li>Giảm giá cuối tuần đến 30%</li>
+                            <li>Miễn phí vận chuyển đơn từ 500k</li>
+                            <li>Trả góp 0% cho nhiều sản phẩm</li>
+                            <li>Bảo hành chính hãng toàn quốc</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="category-section py-5">
+        <div class="container">
+            <div class="section-heading d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <h2>Danh mục nổi bật</h2>
+                    <p>Chọn nhanh nhóm sản phẩm bạn đang cần.</p>
+                </div>
+                <a th:href="@{/products}" class="view-all">Xem tất cả</a>
+            </div>
+            <div class="row g-3 mt-1">
+                <div class="col-6 col-md-4 col-xl-2" th:each="genre : ${genres}">
+                    <a class="category-card text-decoration-none"
+                       th:href="@{/products(genreId=${genre.genreId})}">
+                        <div class="category-icon">⚡</div>
+                        <div class="category-name" th:text="${genre.genreName}">Danh mục</div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="promo-section pb-5">
+        <div class="container">
+            <div class="row g-3">
+                <div class="col-md-6 col-xl-3">
+                    <div class="promo-card">
+                        <h3>Giảm giá cuối tuần</h3>
+                        <p>Săn ưu đãi lên đến 30% cho nhiều mặt hàng gia dụng bán chạy.</p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-xl-3">
+                    <div class="promo-card">
+                        <h3>Freeship đơn từ 500k</h3>
+                        <p>Áp dụng tại nhiều khu vực, giao hàng nhanh và đóng gói an toàn.</p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-xl-3">
+                    <div class="promo-card">
+                        <h3>Trả góp 0%</h3>
+                        <p>Dễ dàng sở hữu thiết bị điện máy giá trị cao với chi phí nhẹ hơn.</p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-xl-3">
+                    <div class="promo-card">
+                        <h3>Bảo hành chính hãng</h3>
+                        <p>An tâm mua sắm với sản phẩm chính hãng và hậu mãi rõ ràng.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="filters" class="filter-section pb-5">
+        <div class="container">
+            <div class="filter-box">
+                <div>
+                    <h2>Lọc và tìm nhanh sản phẩm</h2>
+                    <p>Tìm theo từ khóa, danh mục hoặc khoảng giá gần đúng.</p>
+                </div>
+                <form class="row g-3 align-items-end" th:action="@{/products/search}" method="get">
+                    <div class="col-md-4">
+                        <label class="form-label">Từ khóa</label>
+                        <input type="text" class="form-control" name="keyword" placeholder="Ví dụ: máy giặt inverter">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Danh mục</label>
+                        <select class="form-select" name="genreId">
+                            <option value="">Tất cả danh mục</option>
+                            <option th:each="genre : ${genres}" th:value="${genre.genreId}" th:text="${genre.genreName}"></option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Giá từ</label>
+                        <select class="form-select" name="priceFrom">
+                            <option value="">Bất kỳ</option>
+                            <option value="1000000">1 triệu</option>
+                            <option value="3000000">3 triệu</option>
+                            <option value="5000000">5 triệu</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <button type="submit" class="btn btn-primary w-100">Áp dụng</button>
+                    </div>
+                </form>
+                <div class="filter-note">Hiện form đang ưu tiên tìm kiếm keyword để giữ backend ổn định, có thể mở rộng filter sâu ở bước sau.</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="product-section pb-5">
+        <div class="container">
+            <div class="section-heading d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <h2>Sản phẩm hot</h2>
+                    <p>Ưu tiên theo lượt mua, phù hợp để làm nổi bật trên trang chủ.</p>
+                </div>
+                <a th:href="@{/products}" class="view-all">Xem danh sách đầy đủ</a>
+            </div>
+            <div class="row g-4 mt-1">
+                <div class="col-sm-6 col-lg-3" th:each="product : ${featuredProducts}">
+                    <div class="product-card h-100">
+                        <a th:href="@{/products/{id}(id=${product.id})}" class="product-image-link">
+                            <img th:src="${product.image}" class="product-image" alt="Ảnh sản phẩm">
+                        </a>
+                        <div class="product-body">
+                            <div class="product-tag">Hot</div>
+                            <a th:href="@{/products/{id}(id=${product.id})}" class="product-name-link">
+                                <h3 class="product-name" th:text="${product.productName}">
+                                    Tên sản phẩm
+                                </h3>
+                            </a>
+                            <div class="price-row">
+                                <span class="product-price" th:text="${#numbers.formatDecimal(product.price, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</span>
+                                <span class="product-old-price" th:text="${#numbers.formatDecimal(product.price * 1.12, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</span>
+                            </div>
+                            <div class="product-meta">Đã bán: <span th:text="${product.buyturn != null ? product.buyturn : 0}">0</span></div>
+                            <div class="product-actions">
+                                <a class="btn btn-outline-primary btn-sm" th:href="@{/products/{id}(id=${product.id})}">Chi tiết</a>
+                                <form th:action="@{/cart/add-ajax}" method="post" class="d-inline ajax-add-to-cart-form">
+                                    <input type="hidden" name="productId" th:value="${product.id}">
+                                    <button type="submit" class="btn btn-warning btn-sm fw-semibold">
+                                        Thêm vào giỏ
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="product-section latest-section pb-5">
+        <div class="container">
+            <div class="section-heading">
+                <h2>Sản phẩm mới và đang bán</h2>
+                <p>Một số sản phẩm tiêu biểu lấy trực tiếp từ dữ liệu hiện có.</p>
+            </div>
+            <div class="row g-4 mt-1">
+                <div class="col-sm-6 col-lg-3" th:each="product : ${latestProducts}">
+                    <div class="product-card h-100 alt-card">
+                        <a th:href="@{/products/{id}(id=${product.id})}" class="product-image-link">
+                            <img th:src="${product.image}" class="product-image" alt="Ảnh sản phẩm">
+                        </a>
+                        <div class="product-body">
+                            <a th:href="@{/products/{id}(id=${product.id})}" class="product-name-link">
+                                <h3 class="product-name" th:text="${product.productName}">
+                                    Tên sản phẩm
+                                </h3>
+                            </a>
+                            <div class="price-row">
+                                <span class="product-price" th:text="${#numbers.formatDecimal(product.price, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</span>
+                            </div>
+                            <div class="product-meta">Trạng thái: <span th:text="${product.status == '1' ? 'Đang bán' : 'Tạm ẩn'}">Đang bán</span></div>
+                            <div class="product-actions">
+                                <a class="btn btn-outline-primary btn-sm"
+                                   th:href="@{/products/{id}(id=${product.id})}">
+                                    Chi tiết
+                                </a>
+
+                                <form th:action="@{/cart/add-ajax}" method="post" class="d-inline ajax-add-to-cart-form">
+                                    <input type="hidden" name="productId" th:value="${product.id}">
+                                    <button type="submit" class="btn btn-warning btn-sm fw-semibold">
+                                        Thêm vào giỏ
+                                    </button>
+                                </form>
+                            </div>                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<!-- AI Chat Widget -->
+<button id="ai-chat-toggle" class="ai-chat-toggle">
+    🤖
+</button>
+
+<div id="ai-chat-box" class="ai-chat-box">
+    <div class="ai-chat-header">
+        <div>
+            <strong>Trợ lý AI</strong>
+            <div class="ai-chat-status">Đang online</div>
+        </div>
+        <button id="ai-chat-close">×</button>
+    </div>
+
+    <div id="ai-chat-messages" class="ai-chat-messages">
+        <div class="ai-message bot">
+            Xin chào 👋 Mình là trợ lý AI. Bạn cần tư vấn sản phẩm gì?
+        </div>
+    </div>
+
+    <div class="ai-chat-input">
+        <input id="ai-chat-input" type="text" placeholder="Nhập câu hỏi...">
+        <button id="ai-chat-send">Gửi</button>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/category-menu.js}"></script>
+<script th:src="@{/js/ai-chatbox.js}"></script>
+<script th:src="@{/js/cart-ajax.js}"></script>
+</body>
+</html>

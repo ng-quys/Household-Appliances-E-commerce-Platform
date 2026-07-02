@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Nút nổi trong Web Java</title>
+    <style>
+        /* Vùng chứa nút nổi */
+        .fab-container {
+          position: fixed;
+          bottom: 20px;   /* cách đáy 20px */
+          right: 20px;    /* cách phải 20px */
+          z-index: 1000;  /* nổi trên các phần tử khác */
+        }
+
+        /* Nút nổi */
+        .fab-button {
+          width: 60px;
+          height: 60px;
+          border-radius: 50%;
+          background-color: #ff4081;
+          color: white;
+          border: none;
+          box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+          font-size: 28px;
+          cursor: pointer;
+          transition: background-color 0.3s ease;
+        }
+
+        .fab-button:hover {
+          background-color: #e91e63;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Trang web Java với nút nổi</h1>
+<p>Nội dung trang...</p>
+
+<!-- Nút nổi -->
+<div class="fab-container">
+    <button class="fab-button" title="Thêm mới" onclick="alert('Bạn đã nhấn nút!')">
+        +
+    </button>
+</div>
+
+</body>
+</html>

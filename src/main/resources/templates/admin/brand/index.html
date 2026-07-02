@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý thương hiệu</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Orbitron:wght@500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/admin-cyber.css}">
+</head>
+<body class="admin-cyber-body">
+<div class="admin-dashboard-shell">
+    <aside class="admin-sidebar">
+        <div>
+            <div class="admin-brand">CYBER ADMIN</div>
+            <div class="admin-brand-subtitle">Điều khiển hệ thống bán hàng</div>
+        </div>
+        <nav class="admin-nav">
+            <a class="admin-nav-link" th:href="@{/admin/home}">Dashboard</a>
+            <a class="admin-nav-link" th:href="@{/admin/products}">Quản lý sản phẩm</a>
+            <a class="admin-nav-link active" th:href="@{/admin/brands}">Quản lý thương hiệu</a>
+            <a class="admin-nav-link" th:href="@{/admin/accounts}">Quản lý tài khoản</a>
+            <a class="admin-nav-link" th:href="@{/admin/inventory-prediction}">Dự đoán tồn kho</a>
+            <a class="admin-nav-link" th:href="@{/admin/orders}">Quản lý đơn hàng</a>
+            <a class="admin-nav-link" th:href="@{/}">Về trang chủ</a>
+        </nav>
+    </aside>
+
+    <main class="admin-dashboard-main">
+        <section class="cyber-hero">
+            <div>
+                <div class="cyber-kicker">BRAND CONTROL CENTER</div>
+                <h1 class="cyber-title">Brand Management</h1>
+                <p class="cyber-subtitle">Quản lý thương hiệu sản phẩm, kiểm soát dữ liệu đầu vào cho catalog mà không ảnh hưởng liên kết product hiện tại.</p>
+            </div>
+            <div class="hero-actions">
+                <a class="cyber-button" th:href="@{/admin/brands/create}">+ Thêm thương hiệu</a>
+            </div>
+        </section>
+
+        <div th:if="${success}" class="flash-message success" th:text="${success}"></div>
+        <div th:if="${error}" class="flash-message error" th:text="${error}"></div>
+
+        <form class="cyber-card cyber-toolbar" method="get" th:action="@{/admin/brands}">
+            <input class="cyber-input" type="text" name="search" placeholder="Tìm theo tên thương hiệu..." th:value="${search}">
+            <select class="cyber-select" name="sortOrder">
+                <option value="default" th:selected="${sortOrder == 'default'}">Tên A-Z</option>
+                <option value="latest" th:selected="${sortOrder == 'latest'}">Mới tạo gần đây</option>
+                <option value="updated" th:selected="${sortOrder == 'updated'}">Mới cập nhật</option>
+            </select>
+            <button class="cyber-button-secondary" type="submit">Lọc dữ liệu</button>
+        </form>
+
+        <section class="cyber-card cyber-table-card">
+            <div class="cyber-table-wrap" th:if="${!#lists.isEmpty(brands)}">
+                <table class="cyber-table">
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Logo</th>
+                        <th>Tên thương hiệu</th>
+                        <th>Ngày tạo</th>
+                        <th>Ngày cập nhật</th>
+                        <th>Hành động</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="brand : ${brands}">
+                        <td class="mono" th:text="${brand.brandId}">1</td>
+                        <td>
+                            <img th:if="${@adminBrandController.resolveBrandImage(brand) != null}"
+                                 th:src="${@adminBrandController.resolveBrandImage(brand)}"
+                                 th:alt="${brand.brandName}"
+                                 style="width:56px;height:56px;object-fit:cover;border-radius:14px;border:1px solid rgba(148,163,184,0.25);background:#0f172a;">
+                            <span th:if="${@adminBrandController.resolveBrandImage(brand) == null}" class="helper-text">N/A</span>
+                        </td>
+                        <td>
+                            <strong th:text="${brand.brandName}">Brand Name</strong>
+                        </td>
+                        <td class="mono" th:text="${@adminBrandController.formatDate(brand.createAt)}">N/A</td>
+                        <td class="mono" th:text="${@adminBrandController.formatDate(brand.updateAt)}">N/A</td>
+                        <td>
+                            <div class="cyber-actions">
+                                <a class="cyber-button-secondary" th:href="@{/admin/brands/edit/{id}(id=${brand.brandId})}">Sửa</a>
+                                <form th:action="@{/admin/brands/delete/{id}(id=${brand.brandId})}" method="post" style="display:inline-flex;">
+                                    <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                                    <button class="cyber-button-danger" type="submit" onclick="return confirm('Xóa thương hiệu này?');">Xóa</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div th:if="${#lists.isEmpty(brands)}" class="empty-state">Chưa có thương hiệu nào phù hợp bộ lọc hiện tại.</div>
+        </section>
+    </main>
+</div>
+</body>
+</html>
