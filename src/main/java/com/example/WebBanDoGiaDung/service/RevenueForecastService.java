@@ -7,20 +7,23 @@ import org.springframework.stereotype.Service;
 
 import java.time.YearMonth;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class RevenueForecastService {
 
     private final OderDetailRepository oderDetailRepository;
+    private final LstmRevenueModelService lstmRevenueModelService;
 
     public List<RevenueForecastDto> forecastNextMonths(int numberOfMonths) {
-        List<Object[]> rawData = oderDetailRepository.getMonthlyRevenueStatistics();
+        Map<YearMonth, RevenueForecastDto> resultMap = new LinkedHashMap<>();
 
-        List<RevenueForecastDto> result = new ArrayList<>();
-        List<Double> revenues = new ArrayList<>();
-        List<YearMonth> months = new ArrayList<>();
+        List<Object[]> rawData = oderDetailRepository.getMonthlyRevenueStatistics();
+        List<Double> historicalRevenues = new ArrayList<>();
+        List<YearMonth> historicalMonths = new ArrayList<>();
 
         for (Object[] row : rawData) {
             int year = ((Number) row[0]).intValue();
@@ -28,36 +31,95 @@ public class RevenueForecastService {
             double revenue = row[2] == null ? 0.0 : ((Number) row[2]).doubleValue();
 
             YearMonth yearMonth = YearMonth.of(year, month);
-            months.add(yearMonth);
-            revenues.add(revenue);
+            historicalMonths.add(yearMonth);
+            historicalRevenues.add(revenue);
 
-            result.add(new RevenueForecastDto(
+            resultMap.put(yearMonth, new RevenueForecastDto(
                     formatMonth(yearMonth),
                     revenue,
                     null
             ));
         }
 
-        if (revenues.isEmpty()) {
-            return result;
+        if (lstmRevenueModelService.isAvailable()) {
+            addLstmMonthlyForecast(resultMap, numberOfMonths);
+            return new ArrayList<>(resultMap.values());
         }
 
-        YearMonth lastMonth = months.get(months.size() - 1);
+        addFallbackForecast(resultMap, historicalMonths, historicalRevenues, numberOfMonths);
+        return new ArrayList<>(resultMap.values());
+    }
 
-        double averageGrowthRate = calculateAverageGrowthRate(revenues);
+    public List<LstmRevenueModelService.DailyForecastPoint> forecastDailyPoints(int days) {
+        if (!lstmRevenueModelService.isAvailable() || days <= 0) {
+            return List.of();
+        }
 
-        double lastRevenue = revenues.get(revenues.size() - 1);
+        return lstmRevenueModelService.forecastNextDays(days);
+    }
+
+    public double forecastTotalNextDays(int days) {
+        return forecastDailyPoints(days)
+                .stream()
+                .mapToDouble(LstmRevenueModelService.DailyForecastPoint::forecastRevenue)
+                .sum();
+    }
+
+    private void addLstmMonthlyForecast(Map<YearMonth, RevenueForecastDto> resultMap, int numberOfMonths) {
+        List<LstmRevenueModelService.DailyForecastPoint> dailyForecasts =
+                lstmRevenueModelService.forecastNextDays(numberOfMonths * 31);
+
+        Map<YearMonth, Double> forecastByMonth = new LinkedHashMap<>();
+
+        for (LstmRevenueModelService.DailyForecastPoint point : dailyForecasts) {
+            YearMonth yearMonth = YearMonth.from(point.date());
+
+            if (!forecastByMonth.containsKey(yearMonth) && forecastByMonth.size() >= numberOfMonths) {
+                break;
+            }
+
+            forecastByMonth.merge(yearMonth, point.forecastRevenue(), Double::sum);
+        }
+
+        for (Map.Entry<YearMonth, Double> entry : forecastByMonth.entrySet()) {
+            YearMonth yearMonth = entry.getKey();
+            double forecastRevenue = entry.getValue();
+
+            RevenueForecastDto existing = resultMap.get(yearMonth);
+
+            if (existing != null) {
+                existing.setForecastRevenue(forecastRevenue);
+            } else {
+                resultMap.put(yearMonth, new RevenueForecastDto(
+                        formatMonth(yearMonth),
+                        null,
+                        forecastRevenue
+                ));
+            }
+        }
+    }
+
+    private void addFallbackForecast(Map<YearMonth, RevenueForecastDto> resultMap,
+                                     List<YearMonth> historicalMonths,
+                                     List<Double> historicalRevenues,
+                                     int numberOfMonths) {
+        if (historicalRevenues.isEmpty()) {
+            return;
+        }
+
+        YearMonth lastMonth = historicalMonths.get(historicalMonths.size() - 1);
+        double averageGrowthRate = calculateAverageGrowthRate(historicalRevenues);
+        double lastRevenue = historicalRevenues.get(historicalRevenues.size() - 1);
 
         for (int i = 1; i <= numberOfMonths; i++) {
             YearMonth forecastMonth = lastMonth.plusMonths(i);
-
             double forecastRevenue = lastRevenue * (1 + averageGrowthRate);
 
             if (forecastRevenue < 0) {
                 forecastRevenue = 0;
             }
 
-            result.add(new RevenueForecastDto(
+            resultMap.put(forecastMonth, new RevenueForecastDto(
                     formatMonth(forecastMonth),
                     null,
                     forecastRevenue
@@ -65,8 +127,6 @@ public class RevenueForecastService {
 
             lastRevenue = forecastRevenue;
         }
-
-        return result;
     }
 
     private double calculateAverageGrowthRate(List<Double> revenues) {
@@ -81,8 +141,7 @@ public class RevenueForecastService {
             double current = revenues.get(i);
 
             if (previous > 0) {
-                double growthRate = (current - previous) / previous;
-                growthRates.add(growthRate);
+                growthRates.add((current - previous) / previous);
             }
         }
 
@@ -97,7 +156,6 @@ public class RevenueForecastService {
 
         double average = total / growthRates.size();
 
-        // Giới hạn để dự báo không bị tăng/giảm quá ảo
         if (average > 0.3) {
             average = 0.3;
         }

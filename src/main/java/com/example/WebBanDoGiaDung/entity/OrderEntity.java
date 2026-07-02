@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Entity
 @Table(name = "`Order`")
-public class OrderEntity {
+public class OrderEntity extends Auditable{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "order_id")
@@ -38,20 +38,11 @@ public class OrderEntity {
     @Column(name = "order_note", length = 200)
     private String orderNote;
 
-    @Column(name = "create_at", nullable = false)
-    private LocalDateTime createAt;
+
 
     @Column(name = "total", nullable = false)
     private Double total;
 
-    @Column(name = "create_by", nullable = false, length = 100)
-    private String createBy;
-
-    @Column(name = "update_by", nullable = false, length = 100)
-    private String updateBy;
-
-    @Column(name = "update_at", nullable = false)
-    private LocalDateTime updateAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "account_id", referencedColumnName = "account_id")

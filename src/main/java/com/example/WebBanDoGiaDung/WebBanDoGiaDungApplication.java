@@ -6,8 +6,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.event.EventListener;
+import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
 @SpringBootApplication
+@EnableJpaAuditing(auditorAwareRef = "auditorProvider")
 public class WebBanDoGiaDungApplication {
 
     private final CacheManager cacheManager;

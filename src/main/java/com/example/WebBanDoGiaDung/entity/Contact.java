@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Entity
 @Table(name = "Contact")
-public class Contact {
+public class Contact extends Auditable{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "contact_id")
@@ -30,15 +30,5 @@ public class Contact {
     @Column(name = "status", nullable = false, length = 1)
     private String status;
 
-    @Column(name = "create_by", nullable = false, length = 20)
-    private String createBy;
 
-    @Column(name = "create_at", nullable = false)
-    private LocalDateTime createAt;
-
-    @Column(name = "update_by", nullable = false, length = 20)
-    private String updateBy;
-
-    @Column(name = "update_at")
-    private LocalDateTime updateAt;
 }

@@ -88,6 +88,7 @@ public class PaymentController {
             if (updated) {
                 publishOrderPaidEvent(internalOrderId);
             }
+            return "redirect:/orders/invoice/" + internalOrderId + "?paid=true";
         }
 
         model.addAttribute("success", success);
@@ -99,7 +100,9 @@ public class PaymentController {
         model.addAttribute("momoOrderId", momoOrderId);
         model.addAttribute("momoTransactionId", transId);
 
-        List<OderDetail> orderDetails = oderDetailService.findByOrderId(internalOrderId);
+        List<OderDetail> orderDetails = internalOrderId != null
+                ? oderDetailService.findByOrderId(internalOrderId)
+                : List.of();
         model.addAttribute("orderDetails", orderDetails);
 
         return "payment/result";

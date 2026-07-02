@@ -148,6 +148,18 @@ public class AccountAddressServiceImpl extends AbstractCrudService<AccountAddres
                 .orElseThrow(() -> new IllegalArgumentException("Tài khoản chưa có địa chỉ mặc định"));
     }
 
+    @Override
+    public AccountAddress getAddressForCheckout(Integer accountId, Integer addressId) {
+        if (accountId == null || addressId == null) {
+            throw new IllegalArgumentException("missing_checkout_address");
+        }
+
+        AccountAddress address = repository.findByAccountAddressIdAndAccountAccountId(addressId, accountId)
+                .orElseThrow(() -> new IllegalArgumentException("invalid_checkout_address"));
+        validateAddressUsableForCheckout(address);
+        return address;
+    }
+
     private void validateForm(ProfileAddressForm form) {
         if (form == null) {
             throw new IllegalArgumentException("Dữ liệu địa chỉ không hợp lệ");

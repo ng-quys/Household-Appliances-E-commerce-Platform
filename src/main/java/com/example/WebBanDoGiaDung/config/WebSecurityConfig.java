@@ -51,10 +51,12 @@ public class WebSecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/login", "/register", "/api/auth/**",
-                                "/css/**", "/js/**", "/images/**", "/static/**",
+                        .requestMatchers("/login", "/register", "/forgot-password", "/reset-password", "/api/auth/**",
+                                "/css/**", "/js/**", "/images/**", "/static/**", "/uploads/**", "/favicon.ico", "/error",
                                 "/", "/home", "/home/**", "/products", "/products/**",
-                                "/oauth2/authorization/**", "/login/oauth2/code/**").permitAll()
+                                "/cart", "/cart/**",
+                                "/oauth2/authorization/**", "/login/oauth2/code/**",
+                                "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs/**", "/swagger-ui.html", "/actuator", "/actuator/**").permitAll()
 
                         .requestMatchers("/user/**", "/profile/**").hasAnyRole("USER", "STAFF", "ADMIN")
                         .requestMatchers("/admin/**", "/api/admin/**").hasRole("ADMIN")

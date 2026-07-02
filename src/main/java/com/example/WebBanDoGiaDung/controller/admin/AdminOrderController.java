@@ -11,9 +11,12 @@ import com.example.WebBanDoGiaDung.service.OrderEntityService;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,6 +26,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import com.example.WebBanDoGiaDung.service.ExcelExportService;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+
 @Controller
 @RequestMapping("/admin/orders")
 public class AdminOrderController {
@@ -31,29 +39,51 @@ public class AdminOrderController {
 
     private final OrderEntityService orderEntityService;
     private final OderDetailService oderDetailService;
+    private final ExcelExportService excelExportService;
 
-    public AdminOrderController(OrderEntityService orderEntityService, OderDetailService oderDetailService) {
+    public AdminOrderController(OrderEntityService orderEntityService,
+                                OderDetailService oderDetailService,
+                                ExcelExportService excelExportService) {
         this.orderEntityService = orderEntityService;
         this.oderDetailService = oderDetailService;
+        this.excelExportService = excelExportService;
+    }
+
+    @GetMapping("/export/excel")
+    public ResponseEntity<byte[]> exportToExcel(@RequestParam(required = false) String search,
+                                                @RequestParam(required = false) String status,
+                                                @RequestParam(required = false, defaultValue = "default") String sortOrder) {
+        Pageable pageable = PageRequest.of(0, Integer.MAX_VALUE, resolveSort(sortOrder));
+        Page<OrderEntity> orderPage = orderEntityService.findAdminOrders(search, status, pageable);
+        List<OrderEntity> orders = orderPage.getContent();
+
+        java.io.ByteArrayInputStream in = excelExportService.exportOrders(orders);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Content-Disposition", "attachment; filename=orders_report.xlsx");
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(in.readAllBytes());
     }
 
     @GetMapping
     public String orderManagement(@RequestParam(required = false) String search,
                                   @RequestParam(required = false) String status,
                                   @RequestParam(required = false, defaultValue = "default") String sortOrder,
+                                  @RequestParam(defaultValue = "0") int page,
+                                  @RequestParam(defaultValue = "10") int size,
                                   Model model) {
-        String normalizedSearch = search != null ? search.trim().toLowerCase(Locale.ROOT) : "";
+        Pageable pageable = PageRequest.of(Math.max(page, 0), resolvePageSize(size), resolveSort(sortOrder));
+        Page<OrderEntity> orderPage = orderEntityService.findAdminOrders(search, status, pageable);
 
-        List<OrderEntity> orders = orderEntityService.findAllOrderByNewest().stream()
-                .filter(order -> normalizedSearch.isBlank() || matchesSearch(order, normalizedSearch))
-                .filter(order -> status == null || status.isBlank() || status.equals(order.getStatus()))
-                .sorted(resolveSortComparator(sortOrder))
-                .toList();
-
-        model.addAttribute("orders", orders);
+        model.addAttribute("orders", orderPage.getContent());
+        model.addAttribute("orderPage", orderPage);
         model.addAttribute("search", search);
         model.addAttribute("status", status);
         model.addAttribute("sortOrder", sortOrder);
+        model.addAttribute("size", pageable.getPageSize());
         return "admin/order/index";
     }
 
@@ -156,26 +186,13 @@ public class AdminOrderController {
         return safeDouble(detail != null ? detail.getPrice() : null) * safeQuantity(detail != null ? detail.getQuantity() : null);
     }
 
-    private Comparator<OrderEntity> resolveSortComparator(String sortOrder) {
+    private Sort resolveSort(String sortOrder) {
         return switch (sortOrder) {
-            case "date_asc" -> Comparator.comparing(order -> order.getOrderDate() == null ? LocalDateTime.MIN : order.getOrderDate());
-            case "price_asc" -> Comparator.comparing(order -> order.getTotal() == null ? 0D : order.getTotal());
-            case "price_desc" -> Comparator.comparing((OrderEntity order) -> order.getTotal() == null ? 0D : order.getTotal()).reversed();
-            default -> Comparator.comparing((OrderEntity order) -> order.getOrderDate() == null ? LocalDateTime.MIN : order.getOrderDate()).reversed();
+            case "date_asc" -> Sort.by(Sort.Order.asc("orderDate"), Sort.Order.asc("orderId"));
+            case "price_asc" -> Sort.by(Sort.Order.asc("total"), Sort.Order.desc("orderId"));
+            case "price_desc" -> Sort.by(Sort.Order.desc("total"), Sort.Order.desc("orderId"));
+            default -> Sort.by(Sort.Order.desc("orderDate"), Sort.Order.desc("orderId"));
         };
-    }
-
-    private boolean matchesSearch(OrderEntity order, String search) {
-        if (String.valueOf(order.getOrderId()).contains(search)) {
-            return true;
-        }
-        return containsIgnoreCase(resolveCustomerName(order), search)
-                || containsIgnoreCase(resolveCustomerEmail(order), search)
-                || containsIgnoreCase(resolveCustomerPhone(order), search);
-    }
-
-    private boolean containsIgnoreCase(String value, String search) {
-        return value != null && value.toLowerCase(Locale.ROOT).contains(search);
     }
 
     private boolean isValidStatus(String status) {
@@ -244,5 +261,9 @@ public class AdminOrderController {
 
     private String safeText(String value) {
         return value != null ? value.trim() : "";
+    }
+
+    private int resolvePageSize(int size) {
+        return size <= 0 ? 10 : Math.min(size, 100);
     }
 }

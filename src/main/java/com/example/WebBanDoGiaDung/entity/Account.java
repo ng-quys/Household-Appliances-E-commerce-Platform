@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Entity
 @Table(name = "Accounts")
-public class Account {
+public class Account extends Auditable{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "account_id")
@@ -45,26 +45,10 @@ public class Account {
     @Column(name = "Avatar", columnDefinition = "TEXT")
     private String avatar;
 
-    @Column(name = "create_by", length = 100)
-    private String createBy;
 
-    @Column(name = "create_at")
-    private LocalDateTime createAt;
-
-    @Column(name = "update_by", length = 100)
-    private String updateBy;
-
-    @Column(name = "update_at")
-    private LocalDateTime updateAt;
 
     @Column(name = "status", length = 1)
     private String status;
-
-    @OneToMany(mappedBy = "account")
-    private List<Feedback> feedbacks = new ArrayList<>();
-
-    @OneToMany(mappedBy = "account")
-    private List<ReplyFeedback> replyFeedbacks = new ArrayList<>();
 
     @OneToMany(mappedBy = "account")
     private List<OrderEntity> orders = new ArrayList<>();

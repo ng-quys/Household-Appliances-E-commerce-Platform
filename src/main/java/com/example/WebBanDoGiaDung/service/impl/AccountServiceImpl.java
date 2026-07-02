@@ -3,9 +3,12 @@ package com.example.WebBanDoGiaDung.service.impl;
 import com.example.WebBanDoGiaDung.entity.Account;
 import com.example.WebBanDoGiaDung.repository.AccountRepository;
 import com.example.WebBanDoGiaDung.service.AccountService;
+import com.example.WebBanDoGiaDung.specification.admin.AdminAccountSpecification;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Service;
 
@@ -40,5 +43,8 @@ public class AccountServiceImpl extends AbstractCrudService<Account, Integer> im
         return repository.findByStatus(status);
     }
 
-
+    @Override
+    public Page<Account> findAdminAccounts(String search, Pageable pageable) {
+        return repository.findAll(AdminAccountSpecification.filter(search), pageable);
+    }
 }

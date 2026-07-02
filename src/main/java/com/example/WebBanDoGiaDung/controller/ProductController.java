@@ -5,6 +5,7 @@ import com.example.WebBanDoGiaDung.entity.Genre;
 import com.example.WebBanDoGiaDung.security.CurrentAccountService;
 import com.example.WebBanDoGiaDung.service.GenreService;
 import com.example.WebBanDoGiaDung.service.ProductService;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -25,6 +26,7 @@ public class ProductController {
 
     private static final int DEFAULT_PAGE_SIZE = 12;
     private static final int MAX_PAGE_SIZE = 50;
+    private static final DateTimeFormatter DETAIL_DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     private final ProductService productService;
     private final GenreService genreService;
@@ -128,7 +130,26 @@ public class ProductController {
         ProductCacheDto product = productService.findProductDetailById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Product not found: " + id));
 
+        List<ProductCacheDto> relatedProducts = productService.findRelatedProducts(id, product.getGenreId(), 4);
+
         model.addAttribute("product", product);
+        model.addAttribute("relatedProducts", relatedProducts);
+        model.addAttribute("formattedCreatedAt", "Chưa cập nhật");
+        model.addAttribute("formattedUpdatedAt", "Chưa cập nhật");
+
+        productService.findById(id).ifPresent(fullProduct -> {
+            model.addAttribute("brandName", fullProduct.getBrand() != null ? fullProduct.getBrand().getBrandName() : "Đang cập nhật");
+            model.addAttribute("genreName", fullProduct.getGenre() != null ? fullProduct.getGenre().getGenreName() : (product.getGenreName() != null ? product.getGenreName() : "Đang cập nhật"));
+            model.addAttribute("formattedCreatedAt", fullProduct.getCreateAt() != null ? fullProduct.getCreateAt().format(DETAIL_DATE_FORMATTER) : "Chưa cập nhật");
+            model.addAttribute("formattedUpdatedAt", fullProduct.getUpdateAt() != null ? fullProduct.getUpdateAt().format(DETAIL_DATE_FORMATTER) : "Chưa cập nhật");
+        });
+
+        if (!model.containsAttribute("brandName")) {
+            model.addAttribute("brandName", "Đang cập nhật");
+        }
+        if (!model.containsAttribute("genreName")) {
+            model.addAttribute("genreName", product.getGenreName() != null ? product.getGenreName() : "Đang cập nhật");
+        }
 
         addCurrentUser(model, authentication);
 

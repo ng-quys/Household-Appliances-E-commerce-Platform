@@ -13,9 +13,13 @@ public interface ProductRepository extends JpaRepository<Product, Integer>, JpaS
 
     List<Product> findByGenreGenreId(Integer genreId);
 
+    List<Product> findByGenreGenreIdAndStatus(Integer genreId, String status);
+
     List<Product> findByBrandBrandId(Integer brandId);
 
     long countByBrandBrandId(Integer brandId);
+
+    long countByGenreGenreId(Integer genreId);
 
     List<Product> findByProductNameContainingIgnoreCase(String keyword);
 

@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.example.WebBanDoGiaDung.specification.ProductSpecification;
+import com.example.WebBanDoGiaDung.specification.admin.AdminProductSpecification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -97,6 +98,33 @@ public class ProductServiceImpl extends AbstractCrudService<Product, Integer> im
     }
 
     @Override
+    public List<ProductCacheDto> findRelatedProducts(Integer currentProductId, Integer genreId, int limit) {
+        if (genreId == null || limit <= 0) {
+            return List.of();
+        }
+
+        List<ProductCacheDto> relatedProducts = repository.findByGenreGenreIdAndStatus(genreId, "1").stream()
+                .filter(product -> currentProductId == null || !product.getProductId().equals(currentProductId))
+                .sorted((left, right) -> {
+                    long rightScore = right.getBuyturn() == null ? 0L : right.getBuyturn();
+                    long leftScore = left.getBuyturn() == null ? 0L : left.getBuyturn();
+                    return Long.compare(rightScore, leftScore);
+                })
+                .map(ProductCacheDto::fromEntity)
+                .limit(limit)
+                .toList();
+
+        if (!relatedProducts.isEmpty()) {
+            return relatedProducts;
+        }
+
+        return findFeaturedProducts(limit).stream()
+                .filter(product -> currentProductId == null || !product.getProductId().equals(currentProductId))
+                .limit(limit)
+                .toList();
+    }
+
+    @Override
     public List<ProductCacheDto> applyPriceSort(List<ProductCacheDto> products, String sort) {
         if (products == null) {
             return List.of();
@@ -137,6 +165,11 @@ public class ProductServiceImpl extends AbstractCrudService<Product, Integer> im
         Page<Product> page = repository.findAll(ProductSpecification.hasStatus("1"), pageable);
 
         return page.map(ProductCacheDto::fromEntity);
+    }
+
+    @Override
+    public Page<Product> findAdminProducts(String search, String statusFilter, Pageable pageable) {
+        return repository.findAll(AdminProductSpecification.filter(search, statusFilter), pageable);
     }
 
     @Override

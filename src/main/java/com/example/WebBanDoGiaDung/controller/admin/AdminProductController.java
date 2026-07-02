@@ -1,15 +1,24 @@
 package com.example.WebBanDoGiaDung.controller.admin;
 
+import com.example.WebBanDoGiaDung.dto.AiProductClassificationResponse;
 import com.example.WebBanDoGiaDung.entity.Brand;
 import com.example.WebBanDoGiaDung.entity.Genre;
 import com.example.WebBanDoGiaDung.entity.Product;
 import com.example.WebBanDoGiaDung.service.BrandService;
+import com.example.WebBanDoGiaDung.service.ExcelExportService;
+import com.example.WebBanDoGiaDung.service.FileStorageService;
 import com.example.WebBanDoGiaDung.service.GenreService;
 import com.example.WebBanDoGiaDung.service.OderDetailService;
 import com.example.WebBanDoGiaDung.service.ProductService;
+import com.example.WebBanDoGiaDung.service.ai.AiProductClassificationService;
 import java.time.LocalDateTime;
-import java.util.Comparator;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,6 +27,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
@@ -28,35 +39,74 @@ public class AdminProductController {
     private final BrandService brandService;
     private final GenreService genreService;
     private final OderDetailService oderDetailService;
+    private final FileStorageService fileStorageService;
+    private final AiProductClassificationService aiProductClassificationService;
+    private final ExcelExportService excelExportService;
 
     public AdminProductController(ProductService productService,
                                   BrandService brandService,
                                   GenreService genreService,
-                                  OderDetailService oderDetailService) {
+                                  OderDetailService oderDetailService,
+                                  FileStorageService fileStorageService,
+                                  AiProductClassificationService aiProductClassificationService,
+                                  ExcelExportService excelExportService) {
         this.productService = productService;
         this.brandService = brandService;
         this.genreService = genreService;
         this.oderDetailService = oderDetailService;
+        this.fileStorageService = fileStorageService;
+        this.aiProductClassificationService = aiProductClassificationService;
+        this.excelExportService = excelExportService;
+    }
+
+    @GetMapping("/export/excel")
+    public ResponseEntity<byte[]> exportToExcel(@RequestParam(required = false) String search,
+                                                @RequestParam(required = false, defaultValue = "all") String statusFilter,
+                                                @RequestParam(required = false, defaultValue = "default") String sortOrder) {
+        Pageable pageable = PageRequest.of(0, Integer.MAX_VALUE, resolveSort(sortOrder));
+        Page<Product> productPage = productService.findAdminProducts(search, statusFilter, pageable);
+        List<Product> products = productPage.getContent();
+
+        java.io.ByteArrayInputStream in = excelExportService.exportProducts(products);
+
+        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+        headers.add("Content-Disposition", "attachment; filename=products_report.xlsx");
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(in.readAllBytes());
     }
 
     @GetMapping
     public String index(@RequestParam(required = false) String search,
+                        @RequestParam(required = false, defaultValue = "all") String statusFilter,
                         @RequestParam(required = false, defaultValue = "default") String sortOrder,
+                        @RequestParam(defaultValue = "0") int page,
+                        @RequestParam(defaultValue = "10") int size,
                         Model model) {
-        List<Product> products = productService.findAll().stream()
-                .filter(x -> search == null || search.isBlank() || (x.getProductName() != null && x.getProductName().toLowerCase().contains(search.toLowerCase())))
-                .sorted(switch (sortOrder) {
-                    case "priceAsc" -> Comparator.comparing(x -> x.getPrice() == null ? 0D : x.getPrice());
-                    case "priceDesc" -> Comparator.comparing((Product x) -> x.getPrice() == null ? 0D : x.getPrice()).reversed();
-                    case "stockAsc" -> Comparator.comparingLong(this::resolveQuantity);
-                    case "latest" -> Comparator.comparing(Product::getCreateAt, Comparator.nullsLast(LocalDateTime::compareTo)).reversed();
-                    default -> Comparator.comparing(Product::getProductId, Comparator.nullsLast(Integer::compareTo)).reversed();
-                })
-                .toList();
-        model.addAttribute("products", products);
+        Pageable pageable = PageRequest.of(Math.max(page, 0), resolvePageSize(size), resolveSort(sortOrder));
+        Page<Product> productPage = productService.findAdminProducts(search, statusFilter, pageable);
+
+        model.addAttribute("products", productPage.getContent());
+        model.addAttribute("productPage", productPage);
         model.addAttribute("search", search);
+        model.addAttribute("statusFilter", statusFilter);
         model.addAttribute("sortOrder", sortOrder);
+        model.addAttribute("size", pageable.getPageSize());
         return "admin/product/index";
+    }
+
+
+    @PostMapping(value = "/ai-classify", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseBody
+    public ResponseEntity<AiProductClassificationResponse> aiClassify(@RequestParam("imageFile") MultipartFile imageFile) {
+        AiProductClassificationResponse response = aiProductClassificationService.classify(
+                imageFile,
+                genreService.findAll(),
+                brandService.findAll()
+        );
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/create")
@@ -69,7 +119,18 @@ public class AdminProductController {
     }
 
     @PostMapping("/create")
-    public String createPost(@ModelAttribute("product") Product product, Model model, RedirectAttributes redirectAttributes) {
+    public String createPost(@ModelAttribute("product") Product product,
+                             @RequestParam(value = "imageFile", required = false) MultipartFile imageFile,
+                             Model model,
+                             RedirectAttributes redirectAttributes) {
+        try {
+            applyImageSource(product, imageFile, false, null);
+        } catch (IllegalArgumentException | IllegalStateException exception) {
+            model.addAttribute("error", exception.getMessage());
+            populateProductFormOptions(model);
+            return "admin/product/create";
+        }
+
         String validationError = validateAndAttachRelations(product);
         if (validationError != null) {
             model.addAttribute("error", validationError);
@@ -99,19 +160,29 @@ public class AdminProductController {
     }
 
     @PostMapping("/edit")
-    public String editPost(@ModelAttribute("product") Product model, Model uiModel, RedirectAttributes redirectAttributes) {
+    public String editPost(@ModelAttribute("product") Product model,
+                           @RequestParam(value = "imageFile", required = false) MultipartFile imageFile,
+                           Model uiModel,
+                           RedirectAttributes redirectAttributes) {
         Product product = productService.findById(model.getProductId())
                 .orElseThrow(() -> new IllegalArgumentException("Product not found: " + model.getProductId()));
 
         product.setProductName(model.getProductName());
-        product.setImage(model.getImage());
         product.setPrice(model.getPrice());
         product.setBrandId(model.getBrandId());
         product.setGenreId(model.getGenreId());
         product.setQuantity(model.getQuantity());
-        product.setType(model.getType());
         product.setStatus(model.getStatus());
         product.setDescription(model.getDescription());
+
+        try {
+            applyImageSource(product, imageFile, true, model.getImage());
+        } catch (IllegalArgumentException | IllegalStateException exception) {
+            uiModel.addAttribute("error", exception.getMessage());
+            uiModel.addAttribute("product", product);
+            populateProductFormOptions(uiModel);
+            return "admin/product/edit";
+        }
 
         String validationError = validateAndAttachRelations(product);
         if (validationError != null) {
@@ -167,12 +238,40 @@ public class AdminProductController {
         model.addAttribute("genres", genreService.findAll());
     }
 
-    private long resolveQuantity(Product product) {
-        try {
-            return product != null && product.getQuantity() != null ? Long.parseLong(product.getQuantity().trim()) : 0L;
-        } catch (NumberFormatException exception) {
-            return 0L;
+    private Sort resolveSort(String sortOrder) {
+        return switch (sortOrder) {
+            case "priceAsc" -> Sort.by(Sort.Order.asc("price"), Sort.Order.desc("productId"));
+            case "priceDesc" -> Sort.by(Sort.Order.desc("price"), Sort.Order.desc("productId"));
+            case "stockAsc" -> Sort.by(Sort.Order.asc("quantity"), Sort.Order.desc("productId"));
+            case "stockDesc" -> Sort.by(Sort.Order.desc("quantity"), Sort.Order.desc("productId"));
+            case "latest" -> Sort.by(Sort.Order.desc("createAt"), Sort.Order.desc("productId"));
+            default -> Sort.by(Sort.Order.desc("productId"));
+        };
+    }
+
+    private int resolvePageSize(int size) {
+        return size <= 0 ? 10 : Math.min(size, 100);
+    }
+
+    private void applyImageSource(Product product, MultipartFile imageFile, boolean preserveExistingWhenBlank, String imageValue) {
+        if (imageFile != null && !imageFile.isEmpty()) {
+            product.setImage(fileStorageService.storeProductImage(imageFile));
+            return;
         }
+
+        String normalizedImage = normalizeImage(imageValue != null ? imageValue : product.getImage());
+        if (normalizedImage != null) {
+            product.setImage(normalizedImage);
+            return;
+        }
+
+        if (!preserveExistingWhenBlank) {
+            product.setImage(null);
+        }
+    }
+
+    private String normalizeImage(String image) {
+        return image != null && !image.isBlank() ? image.trim() : null;
     }
 
     private String validateAndAttachRelations(Product product) {
@@ -195,9 +294,6 @@ public class AdminProductController {
             }
         } catch (NumberFormatException exception) {
             return "Số lượng phải là số hợp lệ.";
-        }
-        if (product.getType() == null) {
-            return "Loại sản phẩm là bắt buộc.";
         }
         if (product.getBrandId() == null) {
             return "Vui lòng chọn hãng sản xuất.";

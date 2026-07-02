@@ -4,9 +4,10 @@ import com.example.WebBanDoGiaDung.entity.Genre;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface GenreRepository extends JpaRepository<Genre, Integer> {
+public interface GenreRepository extends JpaRepository<Genre, Integer>, JpaSpecificationExecutor<Genre> {
     Optional<Genre> findByGenreName(String genreName);
 }

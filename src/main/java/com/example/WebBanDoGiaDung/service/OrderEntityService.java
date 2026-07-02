@@ -17,4 +17,6 @@ public interface OrderEntityService extends CrudService<OrderEntity, Integer> {
     Optional<OrderEntity> findByOrderId(Integer orderId);
 
     Page<OrderEntity> findPageByAccountId(Integer accountId, Pageable pageable);
+
+    Page<OrderEntity> findAdminOrders(String search, String status, Pageable pageable);
 }

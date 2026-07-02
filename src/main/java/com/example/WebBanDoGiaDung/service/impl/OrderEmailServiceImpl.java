@@ -104,7 +104,6 @@ public class OrderEmailServiceImpl implements OrderEmailService {
         context.setVariable("deliveryMethod", adminOrderController.resolveDeliveryName(order));
         context.setVariable("paymentMethod", adminOrderController.resolvePaymentName(order));
         context.setVariable("subtotal", formatMoney(calculateSubtotal(details)));
-        context.setVariable("discount", formatMoney(0D));
         context.setVariable("shippingFee", formatMoney(resolveShippingFee(order.getDelivery()).doubleValue()));
         context.setVariable("grandTotal", adminOrderController.formatOrderTotal(order));
         context.setVariable("orderStatus", adminOrderController.resolveOrderStatus(order.getStatus()));

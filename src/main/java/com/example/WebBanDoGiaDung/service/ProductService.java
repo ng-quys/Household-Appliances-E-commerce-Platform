@@ -27,9 +27,13 @@ public interface ProductService extends CrudService<Product, Integer> {
 
     List<ProductCacheDto> findFeaturedProducts(int limit);
 
+    List<ProductCacheDto> findRelatedProducts(Integer currentProductId, Integer genreId, int limit);
+
     List<ProductCacheDto> applyPriceSort(List<ProductCacheDto> products, String sort);
 
     Page<ProductCacheDto> findActiveProducts(Pageable pageable);
+
+    Page<Product> findAdminProducts(String search, String statusFilter, Pageable pageable);
 
     Page<ProductCacheDto> searchProducts(String keyword, Integer genreId, Integer brandId,
                                          Double minPrice, Double maxPrice, Pageable pageable);

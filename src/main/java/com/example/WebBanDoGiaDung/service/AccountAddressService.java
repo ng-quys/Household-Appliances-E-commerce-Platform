@@ -25,4 +25,6 @@ public interface AccountAddressService extends CrudService<AccountAddress, Integ
     void setDefaultAddress(Integer accountId, Integer addressId);
 
     AccountAddress getDefaultAddress(Integer accountId);
+
+    AccountAddress getAddressForCheckout(Integer accountId, Integer addressId);
 }

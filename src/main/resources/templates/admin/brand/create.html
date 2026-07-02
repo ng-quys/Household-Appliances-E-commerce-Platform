@@ -7,22 +7,42 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Orbitron:wght@500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <link rel="stylesheet" th:href="@{/css/admin-cyber.css}">
 </head>
 <body class="admin-cyber-body">
 <div class="admin-dashboard-shell">
     <aside class="admin-sidebar">
-        <div>
-            <div class="admin-brand">CYBER ADMIN</div>
-            <div class="admin-brand-subtitle">Điều khiển hệ thống bán hàng</div>
+        <div class="admin-sidebar-head">
+            <div class="admin-sidebar-brand-text">
+                <div class="admin-brand">CYBER ADMIN</div>
+                <div class="admin-brand-subtitle">Điều khiển hệ thống bán hàng</div>
+            </div>
+
+            <button type="button" class="admin-sidebar-toggle" id="adminSidebarToggle" aria-label="Thu gọn menu">
+                <i class="bi bi-list"></i>
+            </button>
         </div>
+
         <nav class="admin-nav">
-            <a class="admin-nav-link" th:href="@{/admin/home}">Dashboard</a>
-            <a class="admin-nav-link" th:href="@{/admin/products}">Quản lý sản phẩm</a>
-            <a class="admin-nav-link active" th:href="@{/admin/brands}">Quản lý thương hiệu</a>
-            <a class="admin-nav-link" th:href="@{/admin/accounts}">Quản lý tài khoản</a>
-            <a class="admin-nav-link" th:href="@{/admin/orders}">Quản lý đơn hàng</a>
-            <a class="admin-nav-link" th:href="@{/}">Về trang chủ</a>
+            <a class="admin-nav-link" th:href="@{/admin/home}"><i class="bi bi-speedometer2 admin-nav-icon"></i><span>Dashboard</span></a>
+            <a class="admin-nav-link" th:href="@{/admin/products}"><i class="bi bi-box-seam admin-nav-icon"></i><span>Quản lý sản phẩm</span></a>
+            <a class="admin-nav-link" th:href="@{/admin/genres}"><i class="bi bi-grid-3x3-gap admin-nav-icon"></i><span>Quản lý danh mục</span></a>
+            <a class="admin-nav-link active" th:href="@{/admin/brands}"><i class="bi bi-patch-check admin-nav-icon"></i><span>Quản lý thương hiệu</span></a>
+            <a class="admin-nav-link" th:href="@{/admin/accounts}"><i class="bi bi-people admin-nav-icon"></i><span>Quản lý tài khoản</span></a>
+            <a class="admin-nav-link" th:href="@{/admin/orders}"><i class="bi bi-receipt-cutoff admin-nav-icon"></i><span>Quản lý đơn hàng</span></a>
+            <a class="admin-nav-link" th:href="@{/}"><i class="bi bi-house-door admin-nav-icon"></i><span>Về trang chủ</span></a>
+            <form th:action="@{/logout}" method="post" class="admin-logout-form">
+                <input type="hidden"
+                       th:if="${_csrf != null}"
+                       th:name="${_csrf.parameterName}"
+                       th:value="${_csrf.token}">
+
+                <button type="submit" class="admin-nav-link admin-nav-logout">
+                    <i class="bi bi-box-arrow-right admin-nav-icon"></i>
+                    <span>Đăng xuất</span>
+                </button>
+            </form>
         </nav>
     </aside>
 
@@ -38,7 +58,7 @@
         <div th:if="${error}" class="flash-message error" th:text="${error}"></div>
 
         <section class="cyber-card" style="max-width: 840px;">
-            <form th:action="@{/admin/brands/create}" th:object="${brand}" method="post" class="cyber-form-grid">
+            <form th:action="@{/admin/brands/create}" th:object="${brand}" method="post" enctype="multipart/form-data" class="cyber-form-grid">
                 <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
 
                 <div class="cyber-form-field">
@@ -49,6 +69,11 @@
                 <div class="cyber-form-field">
                     <label for="image">Logo URL</label>
                     <input id="image" class="cyber-input" type="text" th:field="*{image}" placeholder="https://...">
+                </div>
+
+                <div class="cyber-form-field">
+                    <label for="imageFile">Tải logo từ máy</label>
+                    <input id="imageFile" class="cyber-input" type="file" name="imageFile" accept="image/*">
                 </div>
 
                 <div class="cyber-form-field" style="grid-column: 1 / -1;">
@@ -70,25 +95,51 @@
 
 <script>
     const imageInput = document.getElementById('image');
+    const imageFileInput = document.getElementById('imageFile');
     const previewImage = document.getElementById('brandImagePreview');
     const fallbackText = document.getElementById('brandImageFallback');
 
-    function updatePreview() {
-        const value = imageInput.value.trim();
-        if (value) {
-            previewImage.src = value;
+    function showPreview(src) {
+        if (src) {
+            previewImage.src = src;
             previewImage.style.display = 'block';
             fallbackText.style.display = 'none';
         } else {
+            previewImage.removeAttribute('src');
             previewImage.style.display = 'none';
             fallbackText.style.display = 'block';
         }
     }
 
-    if (imageInput) {
-        imageInput.addEventListener('input', updatePreview);
-        updatePreview();
+    function updatePreviewFromUrl() {
+        const value = imageInput.value.trim();
+        if (value) {
+            showPreview(value);
+        } else if (!imageFileInput.files || imageFileInput.files.length === 0) {
+            showPreview('');
+        }
     }
+
+    function updatePreviewFromFile() {
+        const file = imageFileInput.files && imageFileInput.files[0];
+        if (file) {
+            const objectUrl = URL.createObjectURL(file);
+            showPreview(objectUrl);
+            return;
+        }
+        updatePreviewFromUrl();
+    }
+
+    if (imageInput) {
+        imageInput.addEventListener('input', updatePreviewFromUrl);
+    }
+
+    if (imageFileInput) {
+        imageFileInput.addEventListener('change', updatePreviewFromFile);
+    }
+
+    updatePreviewFromUrl();
 </script>
+<script th:src="@{/js/sidebar.js}"></script>
 </body>
 </html>

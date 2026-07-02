@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Entity
 @Table(name = "Payment")
-public class Payment {
+public class Payment extends Auditable{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "payment_id")
@@ -20,20 +20,11 @@ public class Payment {
     @Column(name = "payment_name", nullable = false, length = 50)
     private String paymentName;
 
-    @Column(name = "create_at", nullable = false)
-    private LocalDateTime createAt;
-
-    @Column(name = "create_by", nullable = false, length = 20)
-    private String createBy;
 
     @Column(name = "status", length = 1)
     private String status;
 
-    @Column(name = "update_by", nullable = false, length = 20)
-    private String updateBy;
 
-    @Column(name = "update_at")
-    private LocalDateTime updateAt;
 
     @OneToMany(mappedBy = "payment")
     private List<OrderEntity> orders = new ArrayList<>();

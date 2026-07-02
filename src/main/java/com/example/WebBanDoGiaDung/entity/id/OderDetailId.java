@@ -18,9 +18,6 @@ public class OderDetailId implements Serializable {
     @Column(name = "genre_id")
     private Integer genreId;
 
-    @Column(name = "disscount_id")
-    private Integer disscountId;
-
     @Column(name = "order_id")
     private Integer orderId;
 }

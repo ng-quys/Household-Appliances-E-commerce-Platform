@@ -9,6 +9,10 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -34,16 +38,17 @@ public class AdminAccountManagementController {
     }
 
     @GetMapping
-    public String index(@RequestParam(required = false) String search, Model model, Authentication authentication) {
-        List<Account> users = accountService.findAll().stream()
-                .filter(u -> search == null || search.isBlank()
-                        || contains(u.getName(), search)
-                        || contains(u.getEmail(), search)
-                        || contains(u.getPhone(), search))
-                .sorted(Comparator.comparing((Account u) -> u.getCreateAt() == null ? LocalDateTime.MIN : u.getCreateAt()).reversed())
-                .toList();
-        model.addAttribute("users", users);
+    public String index(@RequestParam(required = false) String search,
+                        @RequestParam(defaultValue = "0") int page,
+                        @RequestParam(defaultValue = "10") int size,
+                        Model model,
+                        Authentication authentication) {
+        Pageable pageable = PageRequest.of(Math.max(page, 0), resolvePageSize(size), Sort.by(Sort.Order.desc("createAt"), Sort.Order.desc("accountId")));
+        Page<Account> userPage = accountService.findAdminAccounts(search, pageable);
+        model.addAttribute("users", userPage.getContent());
+        model.addAttribute("userPage", userPage);
         model.addAttribute("search", search);
+        model.addAttribute("size", pageable.getPageSize());
         model.addAttribute("currentAccountId", resolveCurrentAccountId(authentication));
         return "admin/account-management/index";
     }
@@ -197,7 +202,7 @@ public class AdminAccountManagementController {
         return account.getEmail() != null ? account.getEmail() : "#" + account.getAccountId();
     }
 
-    private boolean contains(String source, String search) {
-        return source != null && search != null && source.toLowerCase().contains(search.toLowerCase());
+    private int resolvePageSize(int size) {
+        return size <= 0 ? 10 : Math.min(size, 100);
     }
 }

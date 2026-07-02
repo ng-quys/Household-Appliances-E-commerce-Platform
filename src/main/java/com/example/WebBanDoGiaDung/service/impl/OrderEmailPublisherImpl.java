@@ -24,7 +24,7 @@ public class OrderEmailPublisherImpl implements OrderEmailPublisher {
     public void publishOrderPaid(OrderEmailEvent event) {
         publish(event, RabbitMqConfig.ROUTING_KEY_ORDER_PAID);
     }
-
+// gửi tin nhắn vào rabbit mq
     private void publish(OrderEmailEvent event, String routingKey) {
         try {
             rabbitTemplate.convertAndSend(RabbitMqConfig.ORDER_EMAIL_EXCHANGE, routingKey, event);

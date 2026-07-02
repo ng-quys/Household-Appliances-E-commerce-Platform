@@ -8,6 +8,7 @@ import com.example.WebBanDoGiaDung.service.CartService;
 import com.example.WebBanDoGiaDung.service.ProductService;
 import jakarta.servlet.http.HttpSession;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -60,16 +61,45 @@ public class CartServiceImpl implements CartService {
     @Override
     public int getCartQuantity(HttpSession session) {
         return getCartMap(session).values().stream()
+                .filter(quantity -> quantity != null)
                 .mapToInt(Integer::intValue)
                 .sum();
     }
 
-    @SuppressWarnings("unchecked")
     private Map<Integer, Integer> getCartMap(HttpSession session) {
         Object cart = session.getAttribute(CartController.CART_SESSION_KEY);
+        Map<Integer, Integer> normalized = new LinkedHashMap<>();
+
         if (cart instanceof Map<?, ?> existing) {
-            return (Map<Integer, Integer>) existing;
+            existing.forEach((key, value) -> {
+                Integer productId = toPositiveInteger(key);
+                Integer quantity = toPositiveInteger(value);
+                if (productId != null && quantity != null) {
+                    normalized.put(productId, quantity);
+                }
+            });
         }
-        return Map.of();
+
+        session.setAttribute(CartController.CART_SESSION_KEY, normalized);
+        return normalized;
+    }
+
+    private Integer toPositiveInteger(Object value) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            Integer converted = null;
+            if (value instanceof Integer integerValue) {
+                converted = integerValue;
+            } else if (value instanceof Number numberValue) {
+                converted = numberValue.intValue();
+            } else if (value instanceof String stringValue && !stringValue.isBlank()) {
+                converted = Integer.valueOf(stringValue.trim());
+            }
+            return converted != null && converted > 0 ? converted : null;
+        } catch (NumberFormatException exception) {
+            return null;
+        }
     }
 }

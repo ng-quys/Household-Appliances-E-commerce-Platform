@@ -3,6 +3,7 @@ package com.example.WebBanDoGiaDung.service.impl;
 import com.example.WebBanDoGiaDung.entity.OrderEntity;
 import com.example.WebBanDoGiaDung.repository.OrderEntityRepository;
 import com.example.WebBanDoGiaDung.service.OrderEntityService;
+import com.example.WebBanDoGiaDung.specification.admin.AdminOrderSpecification;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -45,5 +46,10 @@ public class OrderEntityServiceImpl extends AbstractCrudService<OrderEntity, Int
     @Override
     public Page<OrderEntity> findPageByAccountId(Integer accountId, Pageable pageable) {
         return repository.findByAccountAccountIdOrderByOrderDateDesc(accountId, pageable);
+    }
+
+    @Override
+    public Page<OrderEntity> findAdminOrders(String search, String status, Pageable pageable) {
+        return repository.findAll(AdminOrderSpecification.filter(search, status), pageable);
     }
 }

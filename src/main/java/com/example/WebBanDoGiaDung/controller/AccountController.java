@@ -5,6 +5,7 @@ import com.example.WebBanDoGiaDung.entity.AccountAddress;
 import com.example.WebBanDoGiaDung.service.AccountAddressService;
 import com.example.WebBanDoGiaDung.service.AccountService;
 import com.example.WebBanDoGiaDung.service.OrderEntityService;
+import com.example.WebBanDoGiaDung.service.PasswordResetService;
 import jakarta.validation.constraints.Email;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -27,15 +28,18 @@ public class AccountController {
     private final AccountAddressService accountAddressService;
     private final OrderEntityService orderEntityService;
     private final PasswordEncoder passwordEncoder;
+    private final PasswordResetService passwordResetService;
 
     public AccountController(AccountService accountService,
                              AccountAddressService accountAddressService,
                              OrderEntityService orderEntityService,
-                             PasswordEncoder passwordEncoder) {
+                             PasswordEncoder passwordEncoder,
+                             PasswordResetService passwordResetService) {
         this.accountService = accountService;
         this.accountAddressService = accountAddressService;
         this.orderEntityService = orderEntityService;
         this.passwordEncoder = passwordEncoder;
+        this.passwordResetService = passwordResetService;
     }
 
     @GetMapping("/login")
@@ -109,6 +113,54 @@ public class AccountController {
     @GetMapping("/access-denied")
     public String accessDenied() {
         return "auth/access-denied";
+    }
+
+    @GetMapping("/forgot-password")
+    public String forgotPassword() {
+        return "auth/forgot-password";
+    }
+
+    @PostMapping("/forgot-password")
+    public String forgotPasswordPost(@RequestParam String email,
+                                     RedirectAttributes redirectAttributes) {
+        passwordResetService.requestPasswordReset(email);
+        redirectAttributes.addFlashAttribute("success",
+                "Nếu email tồn tại, hệ thống đã gửi hướng dẫn đặt lại mật khẩu.");
+        return "redirect:/forgot-password";
+    }
+
+    @GetMapping("/reset-password")
+    public String resetPasswordToken(@RequestParam(required = false) String token,
+                                     Model model,
+                                     RedirectAttributes redirectAttributes) {
+        if (!passwordResetService.isValidToken(token)) {
+            redirectAttributes.addFlashAttribute("error", "Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.");
+            return "redirect:/forgot-password";
+        }
+        model.addAttribute("token", token);
+        model.addAttribute("email", passwordResetService.findEmailByToken(token).orElse(""));
+        return "auth/reset-password";
+    }
+
+    @PostMapping("/reset-password")
+    public String resetPasswordTokenPost(@RequestParam String token,
+                                         @RequestParam String password,
+                                         @RequestParam String confirmPassword,
+                                         RedirectAttributes redirectAttributes,
+                                         Model model) {
+        try {
+            passwordResetService.resetPassword(token, password, confirmPassword);
+            return "redirect:/login?resetSuccess";
+        } catch (IllegalArgumentException exception) {
+            if (!passwordResetService.isValidToken(token)) {
+                redirectAttributes.addFlashAttribute("error", exception.getMessage());
+                return "redirect:/forgot-password";
+            }
+            model.addAttribute("token", token);
+            model.addAttribute("email", passwordResetService.findEmailByToken(token).orElse(""));
+            model.addAttribute("error", exception.getMessage());
+            return "auth/reset-password";
+        }
     }
 
     @GetMapping("/account/change-password")

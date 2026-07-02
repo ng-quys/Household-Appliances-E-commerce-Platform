@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Entity
 @Table(name = "Oder_Detail")
-public class OderDetail {
+public class OderDetail extends Auditable{
     @EmbeddedId
     private OderDetailId id;
 

@@ -17,6 +17,7 @@ public class ProductCacheDto implements Serializable {
     private Integer productId;
     private Integer genreId;
     private Integer brandId;
+    private String genreName;
     private String productName;
     private Double price;
     private Long view;
@@ -39,7 +40,7 @@ public class ProductCacheDto implements Serializable {
     }
 
     public String getGenreName() {
-        return null;
+        return genreName;
     }
 
     public String getDiscount() {
@@ -51,6 +52,7 @@ public class ProductCacheDto implements Serializable {
                 .productId(product.getProductId())
                 .genreId(product.getGenreId())
                 .brandId(product.getBrandId())
+                .genreName(product.getGenre() != null ? product.getGenre().getGenreName() : null)
                 .productName(product.getProductName())
                 .price(product.getPrice())
                 .view(product.getView())

@@ -9,57 +9,260 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <link rel="stylesheet" th:href="@{/css/home.css}">
+    <style>
+        .detail-panel {
+            background: #fff;
+            border-radius: 24px;
+            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+            border: 1px solid rgba(226, 232, 240, 0.9);
+        }
 
+        .benefit-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+        }
+
+        .benefit-card {
+            padding: 18px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #eff6ff, #f8fafc);
+            border: 1px solid #dbeafe;
+            height: 100%;
+        }
+
+        .benefit-card i {
+            font-size: 1.35rem;
+            color: #1d4ed8;
+            margin-bottom: 10px;
+        }
+
+        .policy-list {
+            display: grid;
+            gap: 14px;
+        }
+
+        .policy-item {
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+            padding: 16px 18px;
+            border-radius: 18px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+        }
+
+        .policy-item i {
+            color: #0f766e;
+            font-size: 1.15rem;
+            margin-top: 2px;
+        }
+
+        .spec-table {
+            margin-bottom: 0;
+        }
+
+        .spec-table th {
+            width: 34%;
+            color: #475569;
+            background: #f8fafc;
+            font-weight: 700;
+        }
+
+        .spec-table td {
+            color: #0f172a;
+        }
+
+        .related-product-card {
+            background: #fff;
+            border-radius: 22px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+            overflow: hidden;
+            height: 100%;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .related-product-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 38px rgba(15, 23, 42, 0.12);
+        }
+
+        .related-product-card img {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            background: #f8fafc;
+        }
+
+        .related-product-body {
+            padding: 18px;
+        }
+
+        .related-product-name {
+            color: #0f172a;
+            text-decoration: none;
+            font-weight: 700;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+
+        .detail-section-title {
+            font-size: 1.55rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .spec-table th {
+                width: 42%;
+            }
+
+            .related-product-card img {
+                height: 190px;
+            }
+        }
+    </style>
 </head>
 <body class="home-page product-detail-page">
 
 <header class="top-header">
-    <div class="container py-3">
-        <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-3 justify-content-between">
+    <div class="container py-2">
+        <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-2 justify-content-between">
             <div>
                 <a class="brand-text text-decoration-none" th:href="@{/}">Điện Máy Gia Dụng</a>
                 <div class="brand-subtitle">Mua sắm tiện nghi, giá tốt mỗi ngày</div>
             </div>
 
-            <form class="search-bar" th:action="@{/products/search}" method="get">
-                <input type="text" name="keyword" class="form-control" placeholder="Tìm nồi cơm điện, máy giặt, tủ lạnh...">
-                <button type="submit" class="btn btn-warning fw-semibold">Tìm kiếm</button>
-            </form>
+            <div class="header-search-group">
+                <div class="category-menu-wrapper">
+                    <button type="button"
+                            class="category-menu-toggle"
+                            data-category-toggle
+                            aria-expanded="false"
+                            aria-controls="header-category-menu">
+                        ☰ Danh mục
+                    </button>
+
+                    <div id="header-category-menu" class="category-mega-menu" data-category-menu>
+                        <div class="category-menu-column category-menu-main-column">
+                            <div class="category-menu-title">Danh mục</div>
+
+                            <div th:if="${#lists.isEmpty(headerGenres)}" class="category-menu-empty">
+                                Chưa có danh mục
+                            </div>
+
+                            <a th:if="${!#lists.isEmpty(headerGenres)}"
+                               th:each="genre, iterStat : ${headerGenres}"
+                               class="category-menu-item"
+                               th:classappend="${iterStat.index == 0} ? ' is-active' : ''"
+                               th:href="@{/products(genreId=${genre.genreId})}"
+                               th:attr="data-genre-tab=${genre.genreId}"
+                               th:text="${genre.genreName}">
+                                Danh mục
+                            </a>
+                        </div>
+
+                        <div class="category-menu-column category-menu-side-column">
+                            <div th:if="${#lists.isEmpty(headerGenres)}" class="category-menu-empty">
+                                Chưa có sản phẩm trong danh mục này
+                            </div>
+
+                            <div th:if="${!#lists.isEmpty(headerGenres)}"
+                                 th:each="genre, iterStat : ${headerGenres}"
+                                 class="category-preview-panel"
+                                 th:classappend="${iterStat.index == 0} ? ' is-active' : ''"
+                                 th:attr="data-genre-panel=${genre.genreId}">
+                                <div class="category-preview-header">
+                                    <div>
+                                        <div class="category-menu-title mb-1" th:text="${genre.genreName}">
+                                            Danh mục
+                                        </div>
+                                        <div class="category-preview-subtitle">
+                                            Sản phẩm nổi bật trong danh mục này
+                                        </div>
+                                    </div>
+
+                                    <a th:href="@{/products(genreId=${genre.genreId})}" class="category-menu-side-link">
+                                        Xem tất cả
+                                    </a>
+                                </div>
+
+                                <div th:if="${#lists.isEmpty(headerGenreProducts[genre.genreId])}" class="category-menu-empty">
+                                    Chưa có sản phẩm trong danh mục này
+                                </div>
+
+                                <div th:if="${!#lists.isEmpty(headerGenreProducts[genre.genreId])}" class="category-product-grid">
+                                    <a th:each="productItem : ${headerGenreProducts[genre.genreId]}"
+                                       class="category-product-card"
+                                       th:href="@{/products/{id}(id=${productItem.id})}">
+                                        <div class="category-product-thumb">
+                                            <img th:if="${productItem.imageUrl != null && !#strings.isEmpty(#strings.trim(productItem.imageUrl))}"
+                                                 th:src="${productItem.imageUrl}"
+                                                 th:alt="${productItem.name}">
+                                            <div th:if="${productItem.imageUrl == null || #strings.isEmpty(#strings.trim(productItem.imageUrl))}"
+                                                 class="category-product-fallback">
+                                                SP
+                                            </div>
+                                        </div>
+                                        <div class="category-product-name" th:text="${productItem.name}">
+                                            Tên sản phẩm
+                                        </div>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <form class="search-bar" th:action="@{/products/search}" method="get">
+                    <input type="text"
+                           name="keyword"
+                           class="form-control"
+                           placeholder="Tìm nồi cơm điện, máy giặt, tủ lạnh...">
+                    <button type="submit" class="btn btn-warning fw-semibold">Tìm kiếm</button>
+                </form>
+            </div>
 
             <div class="header-actions">
                 <a class="header-link" th:href="@{/products}">Sản phẩm</a>
-                <a class="header-link" th:href="@{/cart}">Giỏ hàng
-                    <span th:if="${cartCount != null && cartCount > 0}" th:text="'(' + ${cartCount} + ')'"></span>
+
+                <a class="header-link" th:href="@{/cart}">
+                    Giỏ hàng
+                    <span id="cartCountBadge"
+                          th:classappend="${cartCount == null || cartCount <= 0} ? ' d-none' : ''"
+                          th:text="'(' + ${cartCount != null ? cartCount : 0} + ')'">
+                        (0)
+                    </span>
                 </a>
 
-                <!-- Admin -->
-                <a class="header-link admin-link" sec:authorize="hasRole('ADMIN')" th:href="@{/admin}">
-                    <i class="bi bi-gear"></i> Admin
-                </a>
-
-                <!-- Chưa đăng nhập -->
                 <div sec:authorize="isAnonymous()" class="d-flex gap-2">
                     <a class="btn btn-outline-light" th:href="@{/login}">Đăng nhập</a>
                     <a class="btn btn-light text-primary fw-semibold" th:href="@{/register}">Đăng ký</a>
                 </div>
 
-                <!-- Đã đăng nhập -->
-                <a sec:authorize="isAuthenticated()" class="profile-chip" th:href="@{/profile}">
-                    <span class="profile-chip-icon">
+                <a sec:authorize="isAuthenticated()" class="profile-chip"
+                   th:href="${#authorization.expression('hasRole(''ADMIN'')')} ? @{/admin/home} : @{/profile}">
+                    <span class="profile-chip-icon" aria-hidden="true">
                         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" stroke="currentColor" stroke-width="1.8"/>
                             <path d="M4 21C4 17.6863 7.58172 15 12 15C16.4183 15 20 17.6863 20 21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
                         </svg>
                     </span>
-                    <!-- ✅ ĐÃ SỬA PHẦN NÀY -->
+
                     <span class="profile-chip-name"
                           th:text="${currentUser != null && currentUser.name != null && !#strings.isEmpty(#strings.trim(currentUser.name)) ? #strings.trim(currentUser.name) : (currentUser != null && currentUser.email != null && !#strings.isEmpty(#strings.trim(currentUser.email)) ? #strings.trim(currentUser.email) : #authentication.name)}">
-    Người dùng
-</span>
+                        Người dùng
+                    </span>
                 </a>
             </div>
         </div>
     </div>
+
+    <span class="badge bg-light text-dark" th:text="'Node: ' + ${nodePort}">
+        Node
+    </span>
 </header>
 
 <div class="container py-5">
@@ -67,30 +270,34 @@
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a th:href="@{/}">Trang chủ</a></li>
             <li class="breadcrumb-item"><a th:href="@{/products}">Sản phẩm</a></li>
-            <li class="breadcrumb-item active" th:text="${product.name}"></li>
+            <li class="breadcrumb-item active" th:text="${product.name}">Tên sản phẩm</li>
         </ol>
     </nav>
 
-    <div class="row g-5">
-        <!-- Hình ảnh -->
+    <div class="row g-5 align-items-start">
         <div class="col-lg-6">
             <img th:src="${product.image != null && !#strings.isEmpty(product.image) ? product.image : 'https://via.placeholder.com/600x500?text=San+Pham'}"
-                 class="product-image-main img-fluid w-100" alt="Ảnh sản phẩm">
+                 class="product-image-main img-fluid w-100"
+                 alt="Ảnh sản phẩm">
         </div>
 
-        <!-- Thông tin sản phẩm -->
         <div class="col-lg-6">
-            <h1 class="fw-bold mb-3" th:text="${product.name}"></h1>
+            <h1 class="fw-bold mb-3" th:text="${product.name}">Tên sản phẩm</h1>
 
-            <div class="d-flex align-items-center gap-3 mb-4">
-                <span class="price" th:text="${#numbers.formatDecimal(product.price, 0, 'COMMA', 0, 'POINT')} + ' ₫'"></span>
+            <div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
+                <span class="price"
+                      th:text="${#numbers.formatDecimal(product.price, 0, 'COMMA', 0, 'POINT')} + ' ₫'">
+                    0 ₫
+                </span>
                 <span class="badge bg-success badge-stock" th:if="${product.status == '1'}">Còn hàng</span>
                 <span class="badge bg-danger badge-stock" th:unless="${product.status == '1'}">Hết hàng</span>
             </div>
 
-            <p class="lead mb-4" th:text="${product.description} ?: 'Chưa có mô tả chi tiết cho sản phẩm này.'"></p>
+            <p class="lead mb-4" th:text="${product.description} ?: 'Chưa có mô tả chi tiết cho sản phẩm này.'">
+                Chưa có mô tả chi tiết cho sản phẩm này.
+            </p>
 
-            <div class="d-flex gap-3 mb-4">
+            <div class="d-flex gap-3 mb-4 flex-wrap">
                 <form th:action="@{/cart/add-ajax}" method="post" class="d-inline ajax-add-to-cart-form">
                     <input type="hidden" name="productId" th:value="${product.id}">
                     <button type="submit" class="btn btn-warning fw-semibold">
@@ -103,10 +310,9 @@
                 </a>
             </div>
 
-            <!-- Thông tin bổ sung -->
-            <div class="row g-3 text-muted small">
+            <div class="row g-3 text-muted small mb-4">
                 <div class="col-6">
-                    <strong>Mã sản phẩm:</strong> <span th:text="${product.id}"></span>
+                    <strong>Mã sản phẩm:</strong> <span th:text="${product.id}">0</span>
                 </div>
                 <div class="col-6">
                     <strong>Bảo hành:</strong> 24 tháng
@@ -116,14 +322,182 @@
                 </div>
                 <div class="col-6">
                     <strong>Trạng thái:</strong>
-                    <span th:text="${product.status == '1' ? 'Đang kinh doanh' : 'Tạm ngưng'}"></span>
+                    <span th:text="${product.status == '1' ? 'Đang kinh doanh' : 'Tạm ngưng'}">Đang kinh doanh</span>
+                </div>
+            </div>
+
+            <div class="detail-panel p-4">
+                <div class="d-flex align-items-start gap-3">
+                    <i class="bi bi-stars fs-3 text-warning"></i>
+                    <div>
+                        <h2 class="h5 fw-bold mb-2">Ưu đãi nổi bật</h2>
+                        <ul class="mb-0 ps-3 text-secondary">
+                            <li>Đặt hàng online nhanh gọn, giá hiển thị minh bạch và hỗ trợ xác nhận sớm.</li>
+                            <li>Miễn phí giao hàng nội thành với đơn đủ điều kiện và hỗ trợ kiểm tra khi nhận.</li>
+                            <li>Hỗ trợ tư vấn chọn mẫu cùng nhóm sản phẩm để dễ so sánh trước khi mua.</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <section class="mt-5">
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="detail-panel p-4 h-100">
+                    <h2 class="detail-section-title">Cam kết bảo hành và chính sách</h2>
+                    <p class="text-secondary mb-4">
+                        Mua sắm an tâm hơn với các chính sách hỗ trợ rõ ràng dành cho nhóm điện máy gia dụng.
+                    </p>
+
+                    <div class="policy-list">
+                        <div class="policy-item">
+                            <i class="bi bi-shield-check"></i>
+                            <div>
+                                <strong>Bảo hành chính hãng</strong>
+                                <div class="text-secondary">
+                                    Hỗ trợ bảo hành tiêu chuẩn 24 tháng hoặc theo chính sách từng hãng khi có thông tin cụ thể.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="policy-item">
+                            <i class="bi bi-arrow-repeat"></i>
+                            <div>
+                                <strong>Đổi trả linh hoạt</strong>
+                                <div class="text-secondary">
+                                    Hỗ trợ tiếp nhận phản hồi sớm khi sản phẩm lỗi kỹ thuật hoặc giao sai thông tin đặt hàng.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="policy-item">
+                            <i class="bi bi-headset"></i>
+                            <div>
+                                <strong>Tư vấn trước và sau bán</strong>
+                                <div class="text-secondary">
+                                    Có thể liên hệ để được hướng dẫn chọn công suất, dung tích và nhóm sản phẩm phù hợp nhu cầu.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="detail-panel p-4 h-100">
+                    <h2 class="detail-section-title">Thông số kỹ thuật</h2>
+                    <p class="text-secondary mb-4">
+                        Thông tin tổng hợp trực tiếp từ dữ liệu sản phẩm hiện có trong hệ thống.
+                    </p>
+
+                    <div class="table-responsive">
+                        <table class="table spec-table align-middle">
+                            <tbody>
+                            <tr>
+                                <th>Mã sản phẩm</th>
+                                <td th:text="${product.id}">0</td>
+                            </tr>
+                            <tr>
+                                <th>Thương hiệu</th>
+                                <td th:text="${brandName}">Đang cập nhật</td>
+                            </tr>
+                            <tr>
+                                <th>Danh mục</th>
+                                <td th:text="${genreName}">Đang cập nhật</td>
+                            </tr>
+                            <tr>
+                                <th>Giá bán</th>
+                                <td th:text="${#numbers.formatDecimal(product.price, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</td>
+                            </tr>
+                            <tr>
+                                <th>Số lượng tồn</th>
+                                <td th:text="${product.quantity != null && !#strings.isEmpty(product.quantity) ? product.quantity : 'Đang cập nhật'}">
+                                    Đang cập nhật
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Tình trạng</th>
+                                <td th:text="${product.status == '1' ? 'Đang mở bán' : 'Tạm ngưng'}">Đang mở bán</td>
+                            </tr>
+                            <tr>
+                                <th>Ngày tạo</th>
+                                <td th:text="${formattedCreatedAt}">Chưa cập nhật</td>
+                            </tr>
+                            <tr>
+                                <th>Cập nhật gần nhất</th>
+                                <td th:text="${formattedUpdatedAt}">Chưa cập nhật</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="mt-5" th:if="${relatedProducts != null && !#lists.isEmpty(relatedProducts)}">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+            <div>
+                <h2 class="detail-section-title mb-1">Sản phẩm tương tự</h2>
+                <p class="text-secondary mb-0">
+                    Ưu tiên các sản phẩm cùng danh mục, đang hiển thị và phù hợp để so sánh nhanh.
+                </p>
+            </div>
+
+            <a class="btn btn-outline-primary" th:href="@{/products(genreId=${product.genreId})}">
+                Xem thêm cùng danh mục
+            </a>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-sm-6 col-xl-3" th:each="item : ${relatedProducts}">
+                <div class="related-product-card">
+                    <a th:href="@{/products/{id}(id=${item.id})}">
+                        <img th:src="${item.image != null && !#strings.isEmpty(item.image) ? item.image : 'https://via.placeholder.com/320x260?text=San+Pham'}"
+                             alt="Sản phẩm tương tự">
+                    </a>
+
+                    <div class="related-product-body">
+                        <a class="related-product-name"
+                           th:href="@{/products/{id}(id=${item.id})}"
+                           th:text="${item.productName}">
+                            Tên sản phẩm
+                        </a>
+
+                        <div class="text-secondary small mb-2"
+                             th:text="${item.genreName != null ? item.genreName : 'Cùng nhóm sản phẩm'}">
+                            Cùng nhóm sản phẩm
+                        </div>
+
+                        <div class="fw-bold text-primary mb-3"
+                             th:text="${#numbers.formatDecimal(item.price, 0, 'COMMA', 0, 'POINT')} + ' ₫'">
+                            0 ₫
+                        </div>
+
+                        <div class="d-flex gap-2 flex-wrap">
+                            <a class="btn btn-primary btn-sm" th:href="@{/products/{id}(id=${item.id})}">
+                                Xem chi tiết
+                            </a>
+
+                            <form th:action="@{/cart/add-ajax}" method="post" class="ajax-add-to-cart-form d-inline">
+                                <input type="hidden" name="productId" th:value="${item.id}">
+                                <button type="submit" class="btn btn-warning btn-sm fw-semibold">
+                                    Thêm vào giỏ
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/category-menu.js}"></script>
 <script th:src="@{/js/cart-ajax.js}"></script>
 </body>
 </html>
+

@@ -46,13 +46,11 @@ public class HomeController {
         List<ProductCacheDto> featuredProducts = productService.findFeaturedProducts(8);
 
         List<GenreCacheDto> genres = featuredProducts.stream()
-                .filter(product -> product.getId() != null)
+                .filter(product -> product.getGenreId() != null)
+                .filter(product -> product.getGenreName() != null && !product.getGenreName().isBlank())
                 .collect(Collectors.toMap(
-                        ProductCacheDto::getId,
-                        product -> new GenreCacheDto(
-                                product.getId(),
-                                product.getGenreName()
-                        ),
+                        ProductCacheDto::getGenreId,
+                        product -> new GenreCacheDto(product.getGenreId(), product.getGenreName()),
                         (oldValue, newValue) -> oldValue,
                         java.util.LinkedHashMap::new
                 ))
@@ -63,15 +61,19 @@ public class HomeController {
 
         if (genres.isEmpty()) {
             genres = genreService.findAllGenreSummaries().stream()
-                    .sorted(Comparator.comparing(g -> g.getGenreName() == null ? "" : g.getGenreName()))
                     .limit(12)
                     .toList();
         }
+        List<GenreCacheDto> filterGenres = genreService.findAllGenreSummaries().stream()
+                .sorted(Comparator.comparing(g -> g.getGenreName() == null ? "" : g.getGenreName()))
+                .toList();
+
         List<ProductCacheDto> latestProducts = productService.findActiveProductCards().stream()
                 .limit(12)
                 .toList();
 
         model.addAttribute("genres", genres);
+        model.addAttribute("filterGenres", filterGenres);
         model.addAttribute("featuredProducts", featuredProducts);
         model.addAttribute("latestProducts", latestProducts);
         model.addAttribute("placeholderImage", "https://via.placeholder.com/320x240?text=Do+gia+dung");
