@@ -1,0 +1,8 @@
+.git
+.gitignore
+.idea
+*.iml
+target
+*.zip
+.DS_Store
+README.local.md

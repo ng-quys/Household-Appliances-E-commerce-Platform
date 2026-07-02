@@ -1,0 +1,19 @@
+HUONG DAN TICH HOP LSTM REVENUE FORECAST
+
+Da hoan thanh trong project:
+1. Them dependency ONNX Runtime vao pom.xml.
+2. Doi thu muc resources/Model thanh resources/ml.
+3. Them src/main/java/com/example/WebBanDoGiaDung/service/LstmRevenueModelService.java.
+4. Sua RevenueForecastService.java de uu tien du bao bang LSTM ONNX.
+5. Sua AdminHomeController.java de truyen forecast7Days, forecast30Days, forecast6Months.
+6. Sua templates/admin/home/index.html de hien thi 3 card du bao va bieu do LSTM.
+
+Khi mo project trong IntelliJ:
+- Bam Load Maven Changes.
+- Chay lai Spring Boot.
+- Mo http://localhost:8080/admin/home
+- Neu thanh cong console se hien: Da load LSTM revenue model ONNX thanh cong.
+
+Neu khong load duoc model:
+- Kiem tra 2 file nam dung tai src/main/resources/ml/revenue_lstm.onnx va src/main/resources/ml/revenue_lstm_meta.json
+- Kiem tra Maven da tai duoc com.microsoft.onnxruntime:onnxruntime:1.26.0 chua.

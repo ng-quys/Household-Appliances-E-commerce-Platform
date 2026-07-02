@@ -1,0 +1,65 @@
+services:
+  app:
+    image: ${APP_IMAGE}
+    container_name: web-ban-do-gia-dung-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    environment:
+      SERVER_PORT: 8080
+
+      # Database. Neu khong khai bao cac bien nay thi app se dung cau hinh goc trong application.properties.
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-}
+
+      # Redis/RabbitMQ production trong Docker Compose.
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_CACHE_TYPE: redis
+      SPRING_SESSION_STORE_TYPE: redis
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-mango}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-123456}
+
+      # Cac bien app dang yeu cau san trong application.properties.
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+      JWT_REFRESH_EXPIRATION_MS: ${JWT_REFRESH_EXPIRATION_MS:-604800000}
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8080}
+
+      # Mail/OAuth/Momo/AI. Dien khi can dung chuc nang tuong ung.
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      MOMO_ACCESS_KEY: ${MOMO_ACCESS_KEY:-}
+      MOMO_SECRET_KEY: ${MOMO_SECRET_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      AI_PROVIDER: ${AI_PROVIDER:-gemini}
+      AI_API_KEY: ${AI_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    depends_on:
+      - redis
+      - rabbitmq
+    volumes:
+      - app_uploads:/app/uploads
+
+  redis:
+    image: redis:7-alpine
+    container_name: web-ban-do-gia-dung-redis
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: web-ban-do-gia-dung-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-mango}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-123456}
+    ports:
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+
+volumes:
+  app_uploads:
