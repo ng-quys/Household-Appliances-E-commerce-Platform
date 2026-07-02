@@ -37,4 +37,3 @@ build/
 .env
 *.log
 *.zip
-| Set-Content .gitignore -Encoding UTF8

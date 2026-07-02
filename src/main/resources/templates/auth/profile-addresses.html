@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sổ địa chỉ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/home.css}">
+    <link rel="stylesheet" th:href="@{/css/profile.css}">
+</head>
+<body class="home-page profile-page">
+<header class="top-header">
+    <div class="container py-2">
+        <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-2 justify-content-between">
+            <div>
+                <a class="brand-text text-decoration-none" th:href="@{/}">Điện Máy Gia Dụng</a>
+                <div class="brand-subtitle">Mua sắm tiện nghi, giá tốt mỗi ngày</div>
+            </div>
+
+            <div class="header-search-group">
+                <div class="category-menu-wrapper">
+                    <button type="button"
+                            class="category-menu-toggle"
+                            data-category-toggle
+                            aria-expanded="false"
+                            aria-controls="header-category-menu">
+                        ☰ Danh mục
+                    </button>
+
+                    <div id="header-category-menu" class="category-mega-menu" data-category-menu>
+                        <div class="category-menu-column category-menu-main-column">
+                            <div class="category-menu-title">Danh mục</div>
+                            <div th:if="${#lists.isEmpty(headerGenres)}" class="category-menu-empty">Chưa có danh mục</div>
+                            <a th:if="${!#lists.isEmpty(headerGenres)}"
+                               th:each="genre, iterStat : ${headerGenres}"
+                               class="category-menu-item"
+                               th:classappend="${iterStat.index == 0} ? ' is-active' : ''"
+                               th:href="@{/products(genreId=${genre.genreId})}"
+                               th:attr="data-genre-tab=${genre.genreId}"
+                               th:text="${genre.genreName}">Danh mục</a>
+                        </div>
+                        <div class="category-menu-column category-menu-side-column">
+                            <div th:if="${#lists.isEmpty(headerGenres)}" class="category-menu-empty">Chưa có sản phẩm trong danh mục này</div>
+
+                            <div th:if="${!#lists.isEmpty(headerGenres)}"
+                                 th:each="genre, iterStat : ${headerGenres}"
+                                 class="category-preview-panel"
+                                 th:classappend="${iterStat.index == 0} ? ' is-active' : ''"
+                                 th:attr="data-genre-panel=${genre.genreId}">
+                                <div class="category-preview-header">
+                                    <div>
+                                        <div class="category-menu-title mb-1" th:text="${genre.genreName}">Danh mục</div>
+                                        <div class="category-preview-subtitle">Sản phẩm nổi bật trong danh mục này</div>
+                                    </div>
+                                    <a th:href="@{/products(genreId=${genre.genreId})}" class="category-menu-side-link">Xem tất cả</a>
+                                </div>
+
+                                <div th:if="${#lists.isEmpty(headerGenreProducts[genre.genreId])}" class="category-menu-empty">
+                                    Chưa có sản phẩm trong danh mục này
+                                </div>
+
+                                <div th:if="${!#lists.isEmpty(headerGenreProducts[genre.genreId])}" class="category-product-grid">
+                                    <a th:each="product : ${headerGenreProducts[genre.genreId]}"
+                                       class="category-product-card"
+                                       th:href="@{/products/{id}(id=${product.id})}">
+                                        <div class="category-product-thumb">
+                                            <img th:if="${product.imageUrl != null && !#strings.isEmpty(#strings.trim(product.imageUrl))}"
+                                                 th:src="${product.imageUrl}"
+                                                 th:alt="${product.name}">
+                                            <div th:if="${product.imageUrl == null || #strings.isEmpty(#strings.trim(product.imageUrl))}"
+                                                 class="category-product-fallback">SP</div>
+                                        </div>
+                                        <div class="category-product-name" th:text="${product.name}">Tên sản phẩm</div>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <form class="search-bar" th:action="@{/products/search}" method="get">
+                    <input type="text" name="keyword" class="form-control" placeholder="Tìm nồi cơm điện, máy giặt, tủ lạnh...">
+                    <button type="submit" class="btn btn-warning fw-semibold">Tìm kiếm</button>
+                </form>
+            </div>
+
+            <div class="header-actions">
+                <a class="header-link" th:href="@{/products}">Sản phẩm</a>
+                <a class="header-link" th:href="@{/cart}">
+                    Giỏ hàng
+                    <span id="cartCountBadge"
+                          th:classappend="${cartCount == null || cartCount <= 0} ? ' d-none' : ''"
+                          th:text="'(' + ${cartCount != null ? cartCount : 0} + ')'">
+                    (0)
+                    </span>
+                </a>
+
+                <div sec:authorize="isAnonymous()" class="d-flex gap-2">
+                    <a class="btn btn-outline-light" th:href="@{/login}">Đăng nhập</a>
+                    <a class="btn btn-light text-primary fw-semibold" th:href="@{/register}">Đăng ký</a>
+                </div>
+
+                <a sec:authorize="isAuthenticated()" class="profile-chip"
+                   th:href="${#authorization.expression('hasRole(''ADMIN'')')} ? @{/admin/home} : @{/profile}">
+                    <span class="profile-chip-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" stroke="currentColor" stroke-width="1.8"/>
+                            <path d="M4 21C4 17.6863 7.58172 15 12 15C16.4183 15 20 17.6863 20 21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                        </svg>
+                    </span>
+                    <span class="profile-chip-name" th:text="${currentUser != null && currentUser.name != null && !#strings.isEmpty(#strings.trim(currentUser.name)) ? #strings.trim(currentUser.name) : (currentUser != null && currentUser.email != null && !#strings.isEmpty(#strings.trim(currentUser.email)) ? #strings.trim(currentUser.email) : #authentication.name)}">Người dùng</span>
+                </a>
+            </div>
+        </div>
+    </div>
+    <span class="badge bg-light text-dark" th:text="'Node: ' + ${nodePort}">
+    Node
+</span>
+</header>
+
+<main class="profile-layout">
+    <div class="profile-grid-layout" th:if="${account != null}">
+        <aside class="profile-sidebar">
+            <div class="profile-greeting" th:text="'Xin chào ' + ${displayName}">Xin chào Người dùng</div>
+            <div class="profile-subtext">Quản lý thông tin tài khoản và theo dõi hoạt động mua sắm của bạn.</div>
+
+            <nav class="profile-menu">
+                <a class="profile-menu-item"
+                   th:classappend="${activeTab == 'account'} ? ' active' : ''"
+                   th:href="@{/profile/account}">
+                    Thông tin tài khoản
+                </a>
+
+                <a class="profile-menu-item"
+                   th:classappend="${activeTab == 'orders'} ? ' active' : ''"
+                   th:href="@{/profile/orders}">
+                    Đơn hàng đã mua
+                </a>
+
+                <a class="profile-menu-item"
+                   th:classappend="${activeTab == 'addresses'} ? ' active' : ''"
+                   th:href="@{/profile/addresses}">
+                    Sổ địa chỉ
+                </a>
+
+                <form th:action="@{/logout}" method="post">
+                    <button type="submit" class="profile-logout-button">Đăng xuất</button>
+                </form>
+            </nav>
+        </aside>
+
+        <section class="profile-main-card">
+            <div class="profile-section">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+                    <h2 class="profile-section-title mb-0">Sổ địa chỉ</h2>
+                    <button type="button" class="btn btn-primary fw-semibold" onclick="openAddressForm()">
+                        + Thêm thông tin địa chỉ giao hàng mới
+                    </button>
+                </div>
+
+                <div th:if="${addressSuccess}" class="alert alert-success address-alert" th:text="${addressSuccess}"></div>
+                <div th:if="${addressError}" class="alert alert-danger address-alert" th:text="${addressError}"></div>
+
+                <div th:if="${#lists.isEmpty(addresses)}" class="profile-empty-state">
+                    <p>Bạn chưa có địa chỉ giao hàng nào</p>
+                </div>
+
+                <div th:unless="${#lists.isEmpty(addresses)}" class="address-list">
+                    <div class="address-card" th:each="address : ${addresses}">
+                        <div class="address-card-header">
+                            <div>
+                                <div class="address-recipient" th:text="${address.accountUsername}">Người nhận</div>
+                                <div class="address-phone" th:text="${address.accountPhoneNumber}">0123456789</div>
+                            </div>
+
+                            <span th:if="${address.isDefault}" class="address-default-badge">Mặc định</span>
+                        </div>
+
+                        <div class="address-line" th:text="${address.content}">Số nhà, tên đường</div>
+
+                        <div class="address-location"
+                             th:text="${address.wardName} + ', ' + ${address.districtName} + ', ' + ${address.provinceName}">
+                            Phường/Xã, Quận/Huyện, Tỉnh/Thành phố
+                        </div>
+
+                        <div class="address-card-actions mt-3">
+                            <button type="button"
+                                    class="btn btn-outline-primary btn-sm"
+                                    th:attr="data-id=${address.accountAddressId},
+                                             data-name=${address.accountUsername},
+                                             data-phone=${address.accountPhoneNumber},
+                                             data-province=${address.provinceId},
+                                             data-district=${address.districtId},
+                                             data-ward=${address.wardId},
+                                             data-content=${address.content},
+                                             data-default=${address.isDefault}"
+                                    onclick="editAddress(this)">
+                                Chỉnh sửa
+                            </button>
+
+                            <form th:action="@{/profile/address/delete}" method="post" class="address-actions-form">
+                                <input type="hidden" name="addressId" th:value="${address.accountAddressId}">
+                                <button type="submit" class="btn btn-outline-danger btn-sm">Xóa</button>
+                            </form>
+
+                            <form th:if="${!address.isDefault}" th:action="@{/profile/address/default}" method="post" class="address-actions-form">
+                                <input type="hidden" name="addressId" th:value="${address.accountAddressId}">
+                                <button type="submit" class="btn btn-outline-success btn-sm">Đặt làm mặc định</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="addressFormPanel" class="address-form-panel" th:style="${addressError != null && #lists.isEmpty(addresses)} ? 'display:block;' : 'display:none;'">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                        <h3 id="addressFormTitle" class="fw-bold mb-0">Thêm địa chỉ giao hàng mới</h3>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="closeAddressForm()">Đóng</button>
+                    </div>
+
+                    <form id="addressForm" th:action="@{/profile/address/add}" method="post">
+                        <input type="hidden" name="addressId" id="addressId">
+
+                        <div class="address-form-row">
+                            <div>
+                                <label class="form-label">Họ tên người nhận</label>
+                                <input type="text" class="form-control" name="accountUsername" id="addressName" required>
+                            </div>
+
+                            <div>
+                                <label class="form-label">Số điện thoại</label>
+                                <input type="text" class="form-control" name="accountPhoneNumber" id="addressPhone" maxlength="10" required>
+                            </div>
+                        </div>
+
+                        <div class="address-form-row">
+                            <div>
+                                <label class="form-label">Tỉnh/Thành phố</label>
+                                <select class="form-select" name="provinceId" id="provinceSelect" required>
+                                    <option value="">Chọn Tỉnh/Thành phố</option>
+                                    <option th:each="province : ${provinces}"
+                                            th:value="${province.provinceId}"
+                                            th:text="${province.provinceName}">
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="form-label">Quận/Huyện</label>
+                                <select class="form-select" name="districtId" id="districtSelect" required>
+                                    <option value="">Chọn Quận/Huyện</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="form-label">Phường/Xã</label>
+                                <select class="form-select" name="wardId" id="wardSelect" required>
+                                    <option value="">Chọn Phường/Xã</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="address-form-row">
+                            <div>
+                                <label class="form-label">Địa chỉ cụ thể</label>
+                                <input type="text" class="form-control" name="content" id="addressContent" required>
+                            </div>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="isDefault" value="true" id="addressDefault">
+                            <label class="form-check-label" for="addressDefault">Đặt làm địa chỉ mặc định</label>
+                        </div>
+
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button type="submit" class="btn btn-primary fw-semibold">Lưu địa chỉ</button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="resetAddressForm()">Nhập lại</button>
+                        </div>
+
+                        <div class="address-helper-text mt-3">Nếu đây là địa chỉ đầu tiên, hệ thống sẽ tự đặt làm mặc định.</div>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </div>
+</main>
+
+<script>
+    const addressFormPanel = document.getElementById('addressFormPanel');
+    const addressForm = document.getElementById('addressForm');
+    const addressFormTitle = document.getElementById('addressFormTitle');
+    const addressIdInput = document.getElementById('addressId');
+    const addressNameInput = document.getElementById('addressName');
+    const addressPhoneInput = document.getElementById('addressPhone');
+    const provinceSelect = document.getElementById('provinceSelect');
+    const districtSelect = document.getElementById('districtSelect');
+    const wardSelect = document.getElementById('wardSelect');
+    const addressContentInput = document.getElementById('addressContent');
+    const addressDefaultInput = document.getElementById('addressDefault');
+
+    function openAddressForm() {
+        resetAddressForm();
+        addressForm.action = '/profile/address/add';
+        addressFormTitle.textContent = 'Thêm địa chỉ giao hàng mới';
+        addressFormPanel.style.display = 'block';
+    }
+
+    function closeAddressForm() {
+        addressFormPanel.style.display = 'none';
+    }
+
+    function resetAddressForm() {
+        addressForm.reset();
+        addressIdInput.value = '';
+        districtSelect.innerHTML = '<option value="">Chọn Quận/Huyện</option>';
+        wardSelect.innerHTML = '<option value="">Chọn Phường/Xã</option>';
+    }
+
+    async function loadDistricts(provinceId, selectedDistrictId) {
+        districtSelect.innerHTML = '<option value="">Chọn Quận/Huyện</option>';
+        wardSelect.innerHTML = '<option value="">Chọn Phường/Xã</option>';
+
+        if (!provinceId) {
+            return;
+        }
+
+        const response = await fetch(`/api/address/districts?provinceId=${provinceId}`);
+        const districts = await response.json();
+
+        districts.forEach(district => {
+            const option = document.createElement('option');
+            option.value = district.id;
+            option.textContent = district.name;
+
+            if (selectedDistrictId && String(selectedDistrictId) === String(district.id)) {
+                option.selected = true;
+            }
+
+            districtSelect.appendChild(option);
+        });
+    }
+
+    async function loadWards(districtId, selectedWardId) {
+        wardSelect.innerHTML = '<option value="">Chọn Phường/Xã</option>';
+
+        if (!districtId) {
+            return;
+        }
+
+        const response = await fetch(`/api/address/wards?districtId=${districtId}`);
+        const wards = await response.json();
+
+        wards.forEach(ward => {
+            const option = document.createElement('option');
+            option.value = ward.id;
+            option.textContent = ward.name;
+
+            if (selectedWardId && String(selectedWardId) === String(ward.id)) {
+                option.selected = true;
+            }
+
+            wardSelect.appendChild(option);
+        });
+    }
+
+    provinceSelect.addEventListener('change', async function () {
+        await loadDistricts(this.value);
+    });
+
+    districtSelect.addEventListener('change', async function () {
+        await loadWards(this.value);
+    });
+
+    async function editAddress(button) {
+        resetAddressForm();
+
+        addressForm.action = '/profile/address/update';
+        addressFormTitle.textContent = 'Chỉnh sửa địa chỉ giao hàng';
+
+        addressIdInput.value = button.dataset.id || '';
+        addressNameInput.value = button.dataset.name || '';
+        addressPhoneInput.value = button.dataset.phone || '';
+        addressContentInput.value = button.dataset.content || '';
+        addressDefaultInput.checked = button.dataset.default === 'true';
+        provinceSelect.value = button.dataset.province || '';
+
+        await loadDistricts(button.dataset.province, button.dataset.district);
+        await loadWards(button.dataset.district, button.dataset.ward);
+
+        addressFormPanel.style.display = 'block';
+    }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/category-menu.js}"></script>
+</body>
+</html>
